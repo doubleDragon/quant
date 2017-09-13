@@ -106,3 +106,4 @@ config/settings.ini
 
 .idea/
 *.pyc
+*.log

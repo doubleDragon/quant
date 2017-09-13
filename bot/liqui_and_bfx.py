@@ -12,6 +12,19 @@ from liqui.client import PublicClient as LiquiClient
 
 from common import constant, util
 
+import logging
+
+logger = logging.getLogger('diff')
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler('diff.log')
+fh.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+logger.addHandler(fh)
+logger.addHandler(ch)
 
 INTERVAL = 3
 
@@ -54,7 +67,7 @@ def on_tick():
         diff = buy_price_bfx - sell_price_lq
 
         global trigger_count
-        print(str(currency) + '差价===========>diff:' + str(diff) + "---count: " + str(trigger_count[currency]))
+        logger.debug(str(currency) + '差价===========>diff:' + str(diff) + "---count: " + str(trigger_count[currency]))
 
         trigger = TRIGGER_LIST[i]
         if diff >= trigger:
