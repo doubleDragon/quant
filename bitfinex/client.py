@@ -11,7 +11,7 @@ import time
 
 from decimal import Decimal
 
-from common import depth, constant
+from common import depth, constant, order, account
 
 PROTOCOL = "https"
 HOST = "api.bitfinex.com"
@@ -213,9 +213,17 @@ class PrivateClient(PublicClient):
         signed_payload = self._sign_payload(payload)
         url = BASE_URL + "/order/new"
         resp = self._post(url=url, headers=signed_payload)
-        if resp is not None:
-            return resp['order_id']
-        return None
+        return dict_to_order_result(resp)
+
+    def buy(self, symbol, amount, price):
+        side = 'buy'
+        order_type = 'exchange limit'
+        return self.place_order(symbol=symbol, amount=amount, price=price, side=side, ord_type=order_type)
+
+    def sell(self, symbol, amount, price):
+        side = 'sell'
+        order_type = 'exchange limit'
+        return self.place_order(symbol=symbol, amount=amount, price=price, side=side, ord_type=order_type)
 
     def margin_sell(self, symbol, amount, price):
         side = 'sell'
@@ -237,49 +245,27 @@ class PrivateClient(PublicClient):
         url = BASE_URL + "/balances"
         return self._post(url=url, headers=signed_payload)
 
-    def balance(self, symbol=u'btc', bal_type=u'trading'):
+    def balance(self, bal_type=u'trading'):
+        """
+        :param bal_type: exchange or trading or deposit
+        :return: btc and usd
+        """
         resp = self._balances_inner()
         if resp is not None:
 
             # filter wrong type information
             def is_right_symbol(pp):
-                return (pp[u'currency'] == symbol or pp[u'currency'] == u'usd') and pp[u'type'] == bal_type
+                return (pp[u'currency'] == u'btc' or pp[u'currency'] == u'usd') and pp[u'type'] == bal_type
 
             data = filter(is_right_symbol, resp)
 
             if data is not None:
-                balance = Decimal(0)
-                available_balance = Decimal(0)
-                frozen_balance = Decimal(0)
-
-                stocks = Decimal(0)
-                available_stocks = Decimal(0)
-                frozen_stocks = Decimal(0)
-
-                for item in data:
-                    if item[u'currency'] == u'usd':
-                        balance = Decimal(item[u'amount'])
-                        available_balance = Decimal(item[u'available'])
-                        frozen_balance = balance - available_balance
-
-                    if item[u'currency'] == symbol:
-                        stocks = Decimal(item[u'amount'])
-                        available_stocks = Decimal(item[u'available'])
-                        frozen_stocks = balance - available_balance
-
-                return {
-                    u'balance': balance,
-                    u'available_balance': available_balance,
-                    u'frozen_balance': frozen_balance,
-                    u'stocks': stocks,
-                    u'available_stocks': available_stocks,
-                    u'frozen_stocks': frozen_stocks
-                }
+                return dict_to_account(data)
 
     def get_order(self, order_id):
         """
         Get the status of an order. Is it active? Was it cancelled? To what extent has it been executed? etc.
-        :param order_id:
+        :param order_id: must
         :return:
         """
         payload = {
@@ -293,27 +279,7 @@ class PrivateClient(PublicClient):
         resp = self._post(url=url, headers=signed_payload)
         if resp is not None:
             # 转换order status dict to common
-            origin_amount = Decimal(resp[u'original_amount'])
-            executed_amount = Decimal(resp[u'executed_amount'])
-
-            is_cancelled = resp[u'is_cancelled']
-            is_completed = (executed_amount == origin_amount)
-            order_status = constant.ORDER_STATE_PENDING
-            if is_cancelled:
-                order_status = constant.ORDER_STATE_CANCELED
-            if is_completed:
-                order_status = constant.ORDER_STATE_CLOSED
-            order_status = constant.get_status(constant.EX_BFX, order_status),
-            data = {
-                u'order_id': resp[u'id'],
-                u'price': resp[u'price'],
-                u'status': order_status,
-                u'type': resp[u'type'],
-                u'amount': origin_amount,
-                u'deal_amount': executed_amount,
-                u'was_forced': resp[u'was_forced']
-            }
-            return data
+            return dict_to_order(resp)
 
     def cancel_order(self, order_id):
         payload = {
@@ -327,4 +293,49 @@ class PrivateClient(PublicClient):
         url = BASE_URL + "/order/cancel"
         resp = self._post(url=url, headers=signed_payload)
         if resp is not None:
-            return resp[u'is_cancelled'] is True
+            return resp[u'id'] is not None
+
+
+def dict_to_account(data):
+    res = []
+    for item in data:
+        balance = Decimal(item[u'amount'])
+        available_balance = Decimal(item[u'available'])
+        frozen_balance = balance - available_balance
+        currency = item[u'currency']
+
+        bean = account.Item(currency=currency, balance=balance, available_balance=available_balance,
+                            frozen_balance=frozen_balance)
+        res.append(bean)
+    return res
+
+
+def dict_to_order(resp):
+    origin_amount = Decimal(resp[u'original_amount'])
+    executed_amount = Decimal(resp[u'executed_amount'])
+
+    is_cancelled = resp[u'is_cancelled']
+    is_completed = (executed_amount == origin_amount)
+    if is_completed:
+        order_status = constant.ORDER_STATE_CLOSED
+    else:
+        if is_cancelled:
+            order_status = constant.ORDER_STATE_CANCELED
+        else:
+            order_status = constant.ORDER_STATE_PENDING
+    order_id = resp[u'id']
+    price = resp[u'price']
+    order_type = resp[u'type']
+    return order.Order(order_id=order_id, price=price, status=order_status, order_type=order_type,
+                       amount=origin_amount, deal_amount=executed_amount)
+
+
+def dict_to_order_result(resp):
+    if resp is not None:
+        order_id = resp['order_id']
+        if order_id is not None and order_id > 0:
+            return order.OrderResult(order_id=order_id)
+        else:
+            return order.OrderResult(error='order id not exists')
+    else:
+        return order.OrderResult(error='unknown error, may be balance not enough')

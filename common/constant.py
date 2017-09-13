@@ -22,4 +22,10 @@ EX_OKEX = 'okex'
 EX_BFX = 'bitfinex'
 EX_LQ = 'liqui'
 
-
+"""
+lq 要用到的错误码
+832: 卖的时候币不够了
+831: 买的时候btc不够了
+"""
+CODE_LQ_SELL_NOT_ENOUGH = 832
+CODE_LQ_BUY_NOT_ENOUGH = 831

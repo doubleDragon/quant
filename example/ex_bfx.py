@@ -10,17 +10,41 @@ API_SECRET = settings.BFX_API_SECRET
 
 client = BfxClient(API_KEY, API_SECRET)
 # print(client.symbols())
-print (client.balance('ltc'))
+
+# balance
+# print (client.balance())
+
+# ticker
 # print(client.ticker('ltcusd'))
+
+# depth
 # print(client.depth('ltcusd'))
 
+
+# trade
 # symbol = 'eosusd'
 # amount = '0.1'
 # price = '5.0'
-# side = 'sell'
+# # order_type = 'exchange limit'
 # order_type = 'exchange limit'
 #
-# order_id = client.place_order(amount=amount, price=price, side=side, ord_type=order_type,
-#                               symbol=symbol)
-#
-# print('order id: ' + str(order_id))
+# result = client.sell(symbol=symbol, amount=amount, price=price)
+# if result.error is None:
+#     print(str(result.order_id))
+# else:
+#     print(str(result.error))
+
+
+# cancel order,  order id 必须是整数，类型为int
+# print(client.cancel_order(3798555555))
+
+
+# get order,  order id 必须是整数，类型为int
+# r_order = client.get_order(3798555555)
+# if r_order.is_closed():
+#     print("%s is closed" % r_order.order_id)
+# else:
+#     if r_order.is_canceled():
+#         print("%s is canceled" % r_order.order_id)
+#     else:
+#         print("%s is pending" % r_order.order_id)

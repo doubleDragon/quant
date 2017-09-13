@@ -2,14 +2,13 @@
 # -*- coding: UTF-8 -*-
 import hashlib
 import hmac
-import urllib
+import time
 from decimal import Decimal
 from urllib import urlencode
 
 import requests
-import time
 
-from common import depth
+from common import depth, order, constant, account
 
 PROTOCOL = "https"
 HOST = "api.liqui.io/api"
@@ -113,12 +112,87 @@ class PrivateClient(PublicClient):
         return self._post('getInfo', {})
 
     def balance(self):
-        return self._get_info()
+        """
+        dict funds
+        need to parse and convert to account object
+        :return: account object
+        """
+        resp = self._get_info()
+        if resp is not None:
+            return dict_to_account(resp)
 
-    # def balances(self):
-    #     """
-    #     Just return btc coins, may be need another coin
-    #     """
-    #     resp = self.get_info()
-    #     if resp is not None:
-    #         return resp['funds']['btc']
+    def trade(self, symbol, ttype, trate, tamount):
+        """
+        :param symbol: such as ltc_btc
+        :param ttype: buy or sell
+        :param trate: order price
+        :param tamount: order amount
+        :return: order id
+        """
+        params = {
+            "pair": str(symbol),
+            "type": str(ttype),
+            "rate": str(trate),
+            "amount": str(tamount)}
+        resp = self._post('Trade', params)
+        return dict_to_order_result(resp)
+
+    def buy(self, symbol, price, amount):
+        return self.trade(symbol, 'buy', price, amount)
+
+    def sell(self, symbol, price, amount):
+        return self.trade(symbol, 'sell', price, amount)
+
+    def get_order(self, order_id):
+        params = {"order_id": order_id}
+        resp = self._post('OrderInfo', params)
+        if resp is not None:
+            return dict_to_order(resp)
+
+    def cancel_order(self, order_id):
+        params = {"order_id": order_id}
+        resp = self._post('CancelOrder', params)
+        if resp is not None:
+            print(str(resp))
+            return resp[u'success'] == 1
+
+
+def dict_to_order_result(resp):
+    if resp is None:
+        return order.OrderResult()
+    else:
+        if resp[u'success'] == 1:
+            if (u'return' in resp) and (u'order_id' in resp[u'return']):
+                order_id = resp[u'return'][u'order_id']
+                if order_id > 0:
+                    # 下单成功
+                    return order.OrderResult(order_id=order_id)
+                else:
+                    return order.OrderResult(error='order id less than 0')
+            else:
+                return order.OrderResult(error='stat is success but not return order id')
+        else:
+            return order.OrderResult(code=resp[u'code'], error=resp[u'error'])
+
+
+def dict_to_order(resp):
+    resp = resp[u'return']
+    order_id = resp.keys()[0]
+    if order_id is not None:
+        resp = resp[order_id]
+        price = resp[u'rate']
+        amount = resp[u'start_amount']
+        deal_amount = resp[u'amount']
+        order_type = resp[u'type']
+        order_status = order.get_status(constant.EX_LQ, resp[u'status'])
+        return order.Order(order_id, price, order_status, order_type, amount, deal_amount)
+
+
+def dict_to_account(resp):
+    if u'return' in resp:
+        if u'funds' in resp[u'return']:
+            resp = resp[u'return'][u'funds']
+            balance = resp[u'btc']
+            btc_item = account.Item(currency='btc', balance=balance)
+            data = [btc_item]
+            return account.Account(data)
