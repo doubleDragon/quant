@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
-import sys  
-sys.path.append('/root/workspace/python/quant')  
+#import sys  
+#sys.path.append('/root/workspace/python/quant')  
 
 import time
 from decimal import Decimal
@@ -33,7 +33,7 @@ DEPTH_INDEX_LQ = 0
 
 trigger_count = {
     CURRENCY_ETH: 0,
-    CURRENCY_LTC: 105,
+    CURRENCY_LTC: 0,
     CURRENCY_OMG: 0,
     CURRENCY_EOS: 0
 }
