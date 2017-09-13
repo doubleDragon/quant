@@ -1,5 +1,8 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
+import sys  
+sys.path.append('/root/workspace/python/quant')  
+
 import time
 from decimal import Decimal
 
@@ -8,6 +11,7 @@ from config import settings
 from liqui.client import PublicClient as LiquiClient
 
 from common import constant, util
+
 
 INTERVAL = 3
 

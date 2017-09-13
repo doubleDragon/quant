@@ -105,3 +105,4 @@ ENV/
 config/settings.ini
 
 .idea/
+*.pyc
