@@ -54,7 +54,7 @@ def on_tick():
         diff = buy_price_bfx - sell_price_lq
 
         global trigger_count
-        print(str(currency) + '差价===========>diff:' + str(diff) + "---count: " + str(trigger_count[currency]))
+        print(str(currency) + '=======>差价:' + str(diff) + "---次数: " + str(trigger_count[currency]))
 
         trigger = TRIGGER_LIST[i]
         if diff >= trigger:
