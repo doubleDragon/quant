@@ -197,8 +197,8 @@ class PrivateClient(PublicClient):
             "request": "/v1/order/new",
             "nonce": self._nonce,
             "symbol": symbol,
-            "amount": amount,
-            "price": price,
+            "amount": str(amount),
+            "price": str(price),
             "exchange": exchange,
             "side": side,
             "type": ord_type

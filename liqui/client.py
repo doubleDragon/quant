@@ -139,7 +139,6 @@ class PrivateClient(PublicClient):
             "rate": str(trate),
             "amount": str(tamount)}
         resp = self._post('Trade', params)
-        print(str(resp))
         return dict_to_order_result(resp)
 
     def buy(self, symbol, price, amount):
@@ -206,13 +205,13 @@ def dict_to_order_result(resp):
         if resp[u'success'] == 1:
             if (u'return' in resp) and (u'order_id' in resp[u'return']):
                 order_id = resp[u'return'][u'order_id']
-                return order.OrderResult(order_id=order_id)
-                # if order_id > 0:
-                #     # 下单成功
-                #     return order.OrderResult(order_id=order_id)
-                # else:
-                #     # 需要去其他地方查询
-                #     return order.OrderResult(error='order id less than 0, id=' + str(order_id))
+                if order_id >= 0:
+                    # 下单成功
+                    matched = (int(order_id) == 0)
+                    return order.OrderResult(order_id=order_id, matched=matched)
+                else:
+                    # 需要去其他地方查询
+                    return order.OrderResult(error='order id less than 0, id=' + str(order_id))
             else:
                 return order.OrderResult(error='stat is success but not return order id')
         else:

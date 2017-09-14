@@ -41,11 +41,11 @@ lqClient = LqClient(settings.LIQUI_API_KEY, settings.LIQUI_API_SECRET)
 
 # PAIR_ETH = True 表示eth交易对，目前支持omg和eos
 PAIR_ETH = False
-CURRENCY = 'ltc'
+CURRENCY = 'eos'
 # 差价百分比触发为0.7%
 DIFF_TRIGGER = Decimal('0.7')
 
-# ltc单次交易数量 ,  eos 设置成1, eth 设置成0.1
+# ltc单次交易数量 ,  eos 设置成1, eth和ltc 设置成0.1
 AMOUNT_ONCE = Decimal('1')
 
 FEE_BFX = Decimal('0.2')
@@ -77,29 +77,8 @@ SLIDE_PRICE = Decimal('0')
 
 D_FORMAT = Decimal('0.00000000')
 FORMAT_FOUR = Decimal('0.0000')
-FORMAT_FIVE = Decimal('0.0000')
+FORMAT_FIVE = Decimal('0.00000')
 
-interrupt = False
-
-
-# def cancel_all_orders() {
-#     for (var i = 0; i < exchanges.length; i++) {
-#         while (true) {
-#             var orders = null;
-#             while (!(orders = exchanges[i].GetOrders())) {
-#                 Sleep(Interval);
-#             }
-#
-#             if (orders.length == 0) {
-#                 break;
-#             }
-#
-#             for (var j = 0; j < orders.length; j++) {
-#                 exchanges[i].CancelOrder(orders[j].Id, orders[j]);
-#             }
-#         }
-#     }
-# }
 
 def cancel_all_orders():
     while True:
@@ -352,6 +331,10 @@ def on_action_trade(state):
     buy_amount = min(AMOUNT_ONCE, state.lq.can_buy, state.bfx.can_sell)
     buy_amount_real = buy_amount * (state.lq.fee / Decimal('100') + Decimal('1'))
     buy_amount_real = buy_amount_real.quantize(FORMAT_FOUR)
+    buy_order_total = buy_amount_real * buy_price_real
+    if buy_order_total < PRICE_MIN:
+        logger.debug("lq btc total %s less than 0.0001" % buy_order_total)
+        return
     # lq下买单
     logger.info("lq 委买单======>  price: " + str(buy_price_real) + "   amount: " + str(buy_amount_real) +
                 "   diff" + str(state.diff))
@@ -384,7 +367,7 @@ def on_action_trade(state):
 
     # bfx期货准备开空单, 数量和lq买单成交的量相同
     sell_amount = buy_deal_amount
-    sell_price = state.lq.ticker.buy.price - SLIDE_PRICE
+    sell_price = state.bfx.ticker.buy.price - SLIDE_PRICE
     while True:
         logger.info("bfx 开空单======>  price: " + str(sell_price) + "   amount: " + str(sell_amount) +
                     "   diff" + str(state.diff))
@@ -417,11 +400,10 @@ def on_action_trade(state):
                 time.sleep(INTERVAL)
                 sell_deal_amount = get_deal_amount(constant.EX_BFX, sell_order.order_id)
                 logger.info("bfx卖单的成交量: " + str(sell_deal_amount) + "  order_id: " + str(sell_order.order_id))
-                diff_amount = sell_amount - sell_deal_amount
+
+                diff_amount = Decimal(str(sell_amount)) - Decimal(str(sell_deal_amount))
                 if diff_amount < AMOUNT_MIN:
                     logger.info('交易循环完成')
-                    global interrupt
-                    interrupt = True
                     break
                 """更新数量"""
                 sell_amount = diff_amount
@@ -461,8 +443,6 @@ def on_tick():
 def main():
     init()
     while True:
-        if interrupt:
-            break
         time.sleep(TICK_INTERVAL)
         on_tick()
 
