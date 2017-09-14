@@ -208,7 +208,8 @@ class PrivateClient(PublicClient):
         signed_payload = self._sign_payload(payload)
         url = BASE_URL + "/order/new"
         resp = self._post(url=url, headers=signed_payload)
-        return dict_to_order_result(resp)
+        return dict_to_order(resp)
+        # return dict_to_order_result(resp)
 
     def buy(self, symbol, amount, price):
         side = 'buy'
@@ -289,6 +290,23 @@ class PrivateClient(PublicClient):
         resp = self._post(url=url, headers=signed_payload)
         if resp is not None:
             return resp[u'id'] is not None
+
+    def cancel_all_orders(self):
+        """
+        Cancel all orders.
+
+        :return:
+        """
+        payload = {
+            "request": "/v1/order/cancel/all",
+            "nonce": self._nonce,
+        }
+
+        signed_payload = self._sign_payload(payload)
+        url = BASE_URL + "/order/cancel/all"
+        resp = self._post(url=url, headers=signed_payload)
+        if resp is not None:
+            return True
 
 
 def dict_to_account(data):

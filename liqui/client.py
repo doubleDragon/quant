@@ -139,6 +139,7 @@ class PrivateClient(PublicClient):
             "rate": str(trate),
             "amount": str(tamount)}
         resp = self._post('Trade', params)
+        print(str(resp))
         return dict_to_order_result(resp)
 
     def buy(self, symbol, price, amount):
@@ -180,6 +181,17 @@ class PrivateClient(PublicClient):
         if resp is not None:
             return resp[u'success'] == 1
 
+    def active_orders(self):
+        params = {}
+        resp = self._post('ActiveOrders', params)
+        if resp is not None and u'return' in resp:
+            resp = resp[u'return']
+            keys = resp.keys()
+            if keys is None:
+                return []
+            else:
+                return keys
+
     def trade_history(self, symbol):
         params = {
             "pair": symbol
@@ -199,6 +211,7 @@ def dict_to_order_result(resp):
                 #     # 下单成功
                 #     return order.OrderResult(order_id=order_id)
                 # else:
+                #     # 需要去其他地方查询
                 #     return order.OrderResult(error='order id less than 0, id=' + str(order_id))
             else:
                 return order.OrderResult(error='stat is success but not return order id')

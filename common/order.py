@@ -70,11 +70,12 @@ class OrderResult(object):
             {u'success': 1, u'return': {u'order_id: xxx}}
     """
 
-    def __init__(self, order_id=None, code=None, error=None):
+    def __init__(self, order_id=None, matched=False, code=None, error=None):
         super(OrderResult, self).__init__()
         self.order_id = order_id
         self.code = code
         self.error = error
+        self.matched = matched
 
 
 def get_status(ex_name, origin_status):

@@ -41,9 +41,12 @@ lqClient = LqClient(settings.LIQUI_API_KEY, settings.LIQUI_API_SECRET)
 
 # PAIR_ETH = True 表示eth交易对，目前支持omg和eos
 PAIR_ETH = False
-CURRENCY = 'eos'
+CURRENCY = 'ltc'
 # 差价百分比触发为0.7%
 DIFF_TRIGGER = Decimal('0.7')
+
+# ltc单次交易数量 ,  eos 设置成1, eth 设置成0.1
+AMOUNT_ONCE = Decimal('1')
 
 FEE_BFX = Decimal('0.2')
 FEE_LQ = Decimal('0')
@@ -57,12 +60,8 @@ DEPTH_INDEX_BFX = 1
 
 MAX_DELAY = Decimal('3000')
 
-
 # 单次交易最小的btc量，计算是amount * price
 PRICE_MIN = Decimal('0.0001')
-
-# ltc单次交易数量 ,  eos 设置成1, eth 设置成0.1
-AMOUNT_ONCE = Decimal('1')
 
 # ltc单次交易的最小数量, 平台限制,lqcoin计算每次的total, bfx为0.01, 所以okex这里也设置为0.1
 AMOUNT_MIN = Decimal('0.1')
@@ -101,6 +100,22 @@ interrupt = False
 #         }
 #     }
 # }
+
+def cancel_all_orders():
+    while True:
+        order_ids_lq = lqClient.active_orders()
+        if order_ids_lq is None:
+            time.sleep(INTERVAL)
+            continue
+
+        if len(order_ids_lq) == 0:
+            break
+
+        for order_id in order_ids_lq:
+            lqClient.cancel_order(order_id)
+
+    bfxClient.cancel_all_orders()
+
 
 def init():
     pass
@@ -230,12 +245,14 @@ def get_deal_amount(ex_name, order_id):
         while True:
             order_r = lqClient.get_order(order_id)
             if order_r is None:
+                time.sleep(INTERVAL)
                 continue
             break
     else:
         while True:
             order_r = bfxClient.get_order(order_id)
             if order_r is None:
+                time.sleep(INTERVAL)
                 continue
             break
 
@@ -298,14 +315,6 @@ def on_action_trade(state):
     buy_order_amount = min(max_amount_lq, can_buy)
     buy_order_price_total = (buy_order_amount * buy_price_and_fee).quantize(FORMAT_FIVE)
 
-    # dd = {
-    #     'balance_btc_lq:': balance_btc_lq,
-    #     'max_amount_lq:': max_amount_lq,
-    #     'buy_price_and_fee:': buy_price_and_fee,
-    #     'can_buy:': can_buy,
-    #     'buy_order_amount:': buy_order_amount
-    # }
-    # logger.debug(str(dd))
     balance_enough_lq = (buy_order_amount >= AMOUNT_ONCE) and (buy_order_amount >= AMOUNT_MIN)
     total_enough_lq = buy_order_price_total > PRICE_MIN
     if balance_enough_lq and total_enough_lq:
@@ -355,12 +364,23 @@ def on_action_trade(state):
         return
 
     logger.info("lq 委买单成功, 订单id %s" % str(buy_order_result.order_id))
-    time.sleep(TICK_INTERVAL)
-    buy_deal_amount = get_deal_amount(constant.EX_LQ, buy_order_result.order_id)
-    logger.info("lq买单的成交量: " + str(buy_deal_amount) + "  order_id: " + str(buy_order_result.order_id))
-    if buy_deal_amount < AMOUNT_MIN:
-        logger.info('lq买单成交量小于AMOUNT_MIN, 直接return')
-        return
+
+    """
+    liqui 下单如果order_id返回0那么表示已成交
+    """
+    if int(buy_order_result.order_id) == 0:
+        buy_deal_amount = buy_amount_real
+        logger.info("lq买单的成交量: " + str(buy_deal_amount) + "  order_id: " + str(buy_order_result.order_id))
+    else:
+        """没有马上完全成交，则查询order的成交数量"""
+        time.sleep(TICK_INTERVAL)
+        buy_deal_amount = get_deal_amount(constant.EX_LQ, buy_order_result.order_id)
+        logger.info("lq买单的成交量: " + str(buy_deal_amount) + "  order_id: " + str(buy_order_result.order_id))
+        """这里需要增加限制，如果已经成交的部分不满足bfx的下单要求，则直接return, 也就是说成交量太小了直接结束本次交易"""
+        """目前还不知道bfx最低交易限制，所以先用自定义的AMOUNT_MIN判断"""
+        if buy_deal_amount < AMOUNT_MIN:
+            logger.info('lq买单成交量小于AMOUNT_MIN, 直接return')
+            return
 
     # bfx期货准备开空单, 数量和lq买单成交的量相同
     sell_amount = buy_deal_amount
@@ -368,23 +388,47 @@ def on_action_trade(state):
     while True:
         logger.info("bfx 开空单======>  price: " + str(sell_price) + "   amount: " + str(sell_amount) +
                     "   diff" + str(state.diff))
-        sell_order_result = bfxClient.margin_sell(get_symbol(constant.EX_BFX, CURRENCY), sell_amount, sell_price)
-        if sell_order_result.error is None:
-            time.sleep(TICK_INTERVAL)
-            sell_deal_amount = get_deal_amount(constant.EX_BFX, sell_order_result.order_id)
-            logger.info("bfx卖单的成交量: " + str(sell_deal_amount) + "  order_id: " + str(sell_order_result.order_id))
-            diff_amount = sell_amount - sell_deal_amount
-            if diff_amount < AMOUNT_MIN:
-                logger.info('交易循环完成')
-                global interrupt
-                interrupt = True
+        """
+        由于bfx直接返回了order对象，所以这里用order.Order对象来接收，接着就可以
+        bfx流程如下:
+            1, 下margin卖单，得到order.Order对象，这里就不返回id了，减少一次查询的时间
+            2, 判断order状态是否完全成交
+            3, 如果订单未完成，则1秒后根据order_id继续查询deal_amount,并继续在循环开空单交易
+            4, 如果订单完成，则直接退出
+        """
+        sell_order = bfxClient.margin_sell(get_symbol(constant.EX_BFX, CURRENCY), sell_amount, sell_price)
+        if sell_order is None or sell_order.order_id is None:
+            """开空单直接失败，继续循环开空单"""
+            logger.info("bitfinex开空单失败")
+            time.sleep(INTERVAL)
+            continue
+        else:
+            """开空单成功，检查是否完成"""
+            if sell_order.is_closed():
+                """已全部成交，终止本次流程"""
+                logger.info('$s订单直接完成，交易循环完成' % sell_order.order_id)
                 break
-            sell_amount = diff_amount
+            else:
+                if sell_order.is_canceled():
+                    """正常情况下不会是取消，不排除系统强制给取消了"""
+                    logger.info("订单处于取消状态，异常状态需要排查")
 
+                """查询成交量"""
+                time.sleep(INTERVAL)
+                sell_deal_amount = get_deal_amount(constant.EX_BFX, sell_order.order_id)
+                logger.info("bfx卖单的成交量: " + str(sell_deal_amount) + "  order_id: " + str(sell_order.order_id))
+                diff_amount = sell_amount - sell_deal_amount
+                if diff_amount < AMOUNT_MIN:
+                    logger.info('交易循环完成')
+                    global interrupt
+                    interrupt = True
+                    break
+                """更新数量"""
+                sell_amount = diff_amount
         """
         更新bfx 的价格，以最新的ticker来开空单，此过程大概率亏损
         """
-        time.sleep(TICK_INTERVAL)
+        time.sleep(INTERVAL)
         bfx_ticker = get_bfx_ticker()
         sell_price = bfx_ticker.buy - SLIDE_PRICE
 
@@ -399,6 +443,8 @@ def on_action_ticker(state):
 
 
 def on_tick():
+    cancel_all_orders()
+
     state = get_state()
     update_state(state)
     if 'exception' in state.keys() and state.exception is not None:

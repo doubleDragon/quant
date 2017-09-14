@@ -6,7 +6,7 @@ from liqui.client import PrivateClient as Client
 client = Client(settings.LIQUI_API_KEY, settings.LIQUI_API_SECRET)
 
 # depth
-print(client.depth('eos_btc'))
+# print(client.depth('eos_btc'))
 
 # balance, lq just btc
 # print(client.balance())
@@ -46,4 +46,4 @@ print(client.depth('eos_btc'))
 
 
 # trade history
-# print (client.trade_history('ltc_btc'))
+print (client.trade_history('eos_btc'))
