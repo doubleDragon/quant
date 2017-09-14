@@ -5,12 +5,40 @@ class Item(object):
         self.price = price
         self.amount = amount
 
+    def __str__(self):
+        data = {
+            u'price': self.price,
+            u'amount': self.amount
+        }
+        return str(data)
+
+    def __repr__(self):
+        data = {
+            u'price': self.price,
+            u'amount': self.amount
+        }
+        return str(data)
+
 
 class Depth(object):
     def __init__(self, bids, asks):
         super(Depth, self).__init__()
         self.bids = bids
         self.asks = asks
+
+    def __str__(self):
+        data = {
+            'bids': self.bids,
+            'asks': self.asks
+        }
+        return str(str(data))
+
+    def __repr__(self):
+        data = {
+            'bids': self.bids,
+            'asks': self.asks
+        }
+        return str(str(data))
 
 
 def dict_to_depth(data):

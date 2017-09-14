@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 
-class Account(object):
+class Account(list):
     """
     [
         {
@@ -12,15 +12,8 @@ class Account(object):
     an item list
     """
 
-    def __init__(self, data):
+    def __init__(self):
         super(Account, self).__init__()
-        self.data = data
-
-    def __str__(self):
-        return str(self.data)
-
-    def __repr__(self):
-        return str(self.data)
 
 
 class Item(object):
@@ -62,5 +55,6 @@ class Item(object):
 if __name__ == '__main__':
     item = Item('btc', 10, 11, 12)
     print(item)
-    ac = Account([item])
+    ac = Account()
+    ac.append(item)
     print(ac)

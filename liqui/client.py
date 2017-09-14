@@ -217,5 +217,7 @@ def dict_to_account(resp):
             resp = resp[u'return'][u'funds']
             balance = resp[u'btc']
             btc_item = account.Item(currency='btc', balance=balance)
-            data = [btc_item]
-            return account.Account(data)
+
+            ac = account.Account()
+            ac.append(btc_item)
+            return ac

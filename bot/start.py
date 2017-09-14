@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-#import sys
-#sys.path.append('/root/workspace/python/quant')
+# import sys
+# sys.path.append('/root/workspace/python/quant')
 
 from config import settings
 
@@ -39,8 +39,11 @@ lqClient = LqClient(settings.LIQUI_API_KEY, settings.LIQUI_API_SECRET)
 # SYMBOL_OK = u'ltc_btc'
 # SYMBOL_LTC = u'ltc'
 
-CURRENCY = 'eth'
-DIFF_TRIGGER = Decimal(0.00043)
+# PAIR_ETH = True 表示eth交易对，目前支持omg和eos
+PAIR_ETH = False
+CURRENCY = 'ltc'
+# 差价百分比触发为0.7%
+DIFF_TRIGGER = Decimal(0.7)
 
 FEE_BFX = Decimal(0.2)
 FEE_LQ = Decimal(0)
@@ -49,7 +52,7 @@ INTERVAL = 0.5
 TICK_INTERVAL = 1
 
 # 取深度里的第几条数据, 总公5条
-DEPTH_INDEX_LQ = 1
+DEPTH_INDEX_LQ = 0
 DEPTH_INDEX_BFX = 1
 
 MAX_DELAY = Decimal(2000)
@@ -69,6 +72,8 @@ AMOUNT_RETAIN = Decimal(0.001)
 # ltc交易滑价，暂时不用
 SLIDE_PRICE = Decimal(0)
 
+D_FORMAT = Decimal('0.00000000')
+
 interrupt = False
 
 
@@ -84,9 +89,16 @@ def get_max_amount(list_tmp, index):
     return amount
 
 
+def get_symbol(ex_name, currency):
+    if PAIR_ETH is True:
+        return util.get_symbol_eth(ex_name, currency)
+    else:
+        return util.get_symbol_btc(ex_name, currency)
+
+
 def update_state(state):
     start = Decimal(timestamp.get_current_time())
-    depth_bfx = bfxClient.depth(util.get_symbol(constant.EX_BFX, CURRENCY))
+    depth_bfx = bfxClient.depth(get_symbol(constant.EX_BFX, CURRENCY))
     if depth_bfx is None:
         state.exception = 'bitfinex深度信息获取失败'
         return
@@ -95,7 +107,7 @@ def update_state(state):
     state.bfx.depth = depth_bfx
 
     start = Decimal(timestamp.get_current_time())
-    depth_lq = lqClient.depth(util.get_symbol(constant.EX_LQ, CURRENCY))
+    depth_lq = lqClient.depth(get_symbol(constant.EX_LQ, CURRENCY))
     if depth_lq is None:
         state.exception = 'liqui深度信息获取失败'
         return
@@ -141,10 +153,11 @@ def update_state(state):
     })
 
     # bfx卖 lq买，所以bfx-lq
-    is_maker = state.lq.is_maker
     state.diff = price_buy_bfx - price_sell_lq
-    if is_maker:
+    state.diff_percent = (state.diff / price_sell_lq * Decimal(100)).quantize(D_FORMAT)
+    if state.lq.is_maker:
         state.diff = price_buy_bfx - price_buy_lq
+        state.diff_percent = (state.diff / price_buy_lq * Decimal(100)).quantize(D_FORMAT)
 
 
 def get_state():
@@ -170,11 +183,12 @@ def get_state():
     lq_dict = Bunch()
     lq_dict.account = account_lq
     lq_dict.fee = FEE_LQ
-    lq_dict.is_maker = True
+    lq_dict.is_maker = False
 
-    state = Bunch()
-    state.bfx = bfx_dict
-    state.lq = lq_dict
+    state = Bunch({
+        'bfx': bfx_dict,
+        'lq': lq_dict
+    })
     return state
 
 
@@ -211,7 +225,7 @@ def get_deal_amount(ex_name, order_id):
 
 def get_bfx_ticker():
     while True:
-        ticker = bfxClient.ticker(util.get_symbol(constant.EX_BFX, CURRENCY))
+        ticker = bfxClient.ticker(get_symbol(constant.EX_BFX, CURRENCY))
         if ticker is None:
             continue
         break
@@ -283,7 +297,7 @@ def on_action_trade(state):
     # lq下买单
     logger.info("lq 委买单======>  price: " + str(buy_price_real) + "   amount: " + str(buy_amount_real) +
                 "   diff" + str(state.diff))
-    buy_order_id = lqClient.buy(util.get_symbol(constant.EX_LQ, CURRENCY), buy_price_real, buy_amount_real)
+    buy_order_id = lqClient.buy(get_symbol(constant.EX_LQ, CURRENCY), buy_price_real, buy_amount_real)
     if buy_order_id is None:
         logger.info('lq 委买单失败, 直接return')
         return
@@ -300,7 +314,7 @@ def on_action_trade(state):
     while True:
         logger.info("bfx 开空单======>  price: " + str(sell_price) + "   amount: " + str(sell_amount) +
                     "   diff" + str(state.diff))
-        sell_order_id = bfxClient.margin_sell(util.get_symbol(constant.EX_BFX, CURRENCY), sell_amount, sell_price)
+        sell_order_id = bfxClient.margin_sell(get_symbol(constant.EX_BFX, CURRENCY), sell_amount, sell_price)
         time.sleep(TICK_INTERVAL)
         sell_deal_amount = get_deal_amount(constant.EX_BFX, sell_order_id)
         logger.info("bfx卖单的成交量: " + str(sell_deal_amount) + "  order_id: " + str(sell_order_id))
@@ -320,12 +334,12 @@ def on_action_trade(state):
 
 
 def on_action_ticker(state):
-    if state.diff >= DIFF_TRIGGER:
+    if state.diff_percent >= DIFF_TRIGGER:
         if state.delay > MAX_DELAY:
             # 延迟超过2秒，放弃这次机会
             return
-        logger.debug('差价触发,准备交易========>diff: ' + str(state.diff))
-        on_action_trade(state)
+        logger.debug('差价触发,准备交易========>diff_percent: ' + str(state.diff_percent))
+        # on_action_trade(state)
 
 
 def on_tick():
@@ -334,7 +348,10 @@ def on_tick():
     if 'exception' in state.keys() and state.exception is not None:
         logger.debug(str(state.exception))
         return
-    logger.debug("当前差价========>" + str(state.diff))
+    logger.debug("当前价差========>{buy: " + str(state.lq.ticker.sell.price) +
+                 ", sell: " + str(state.bfx.ticker.buy.price) +
+                 ", diff_percent: " + str(state.diff_percent) +
+                 "}")
 
     on_action_ticker(state)
 

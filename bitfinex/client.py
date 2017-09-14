@@ -292,7 +292,7 @@ class PrivateClient(PublicClient):
 
 
 def dict_to_account(data):
-    res = []
+    ac = account.Account()
     for item in data:
         balance = Decimal(item[u'amount'])
         available_balance = Decimal(item[u'available'])
@@ -301,8 +301,8 @@ def dict_to_account(data):
 
         bean = account.Item(currency=currency, balance=balance, available_balance=available_balance,
                             frozen_balance=frozen_balance)
-        res.append(bean)
-    return res
+        ac.append(bean)
+    return ac
 
 
 def dict_to_order(resp):

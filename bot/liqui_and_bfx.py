@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
-#import sys  
-#sys.path.append('/root/workspace/python/quant')  
+# import sys
+# sys.path.append('/root/workspace/python/quant')
 
 import time
 from decimal import Decimal
@@ -34,7 +34,7 @@ CURRENCY_OMG = u'omg'
 CURRENCY_EOS = u'eos'
 
 CURRENCIES = [CURRENCY_ETH, CURRENCY_LTC, CURRENCY_OMG, CURRENCY_EOS]
-TRIGGER_LIST = [Decimal('0.00043'), Decimal('0.000095'), Decimal('0.000095'), Decimal('0.000095')]
+# TRIGGER_LIST = [Decimal('0.00043'), Decimal('0.000095'), Decimal('0.000095'), Decimal('0.000095')]
 
 # DIFF_TRIGGER = Decimal('0.000095')
 
@@ -44,6 +44,8 @@ lqClient = LiquiClient()
 DEPTH_INDEX_BFX = 1
 DEPTH_INDEX_LQ = 0
 
+TRIGGER_PERCENT = Decimal('0.7')
+
 trigger_count = {
     CURRENCY_ETH: 0,
     CURRENCY_LTC: 0,
@@ -51,26 +53,31 @@ trigger_count = {
     CURRENCY_EOS: 0
 }
 
+D_FORMAT = Decimal('0.00000000')
+
 
 def on_tick():
     for i in range(len(CURRENCIES)):
         currency = CURRENCIES[i]
 
-        depth_lq = lqClient.depth(util.get_symbol(constant.EX_LQ, currency))
+        depth_lq = lqClient.depth(util.get_symbol_btc(constant.EX_LQ, currency))
         if depth_lq is None:
             return
-        depth_bfx = bfxClient.depth(util.get_symbol(constant.EX_BFX, currency))
+        depth_bfx = bfxClient.depth(util.get_symbol_btc(constant.EX_BFX, currency))
         if depth_bfx is None:
             return
         sell_price_lq = depth_lq.asks[DEPTH_INDEX_LQ].price
         buy_price_bfx = depth_bfx.bids[DEPTH_INDEX_BFX].price
         diff = buy_price_bfx - sell_price_lq
+        diff_percent = diff / sell_price_lq * Decimal('100')
+        diff_percent = diff_percent.quantize(D_FORMAT)
 
         global trigger_count
-        logger.debug(str(currency) + '差价===========>diff:' + str(diff) + "---count: " + str(trigger_count[currency]))
+        logger.debug(str(currency) + '===========>差价:' + str(diff) + "---百分比: " + str(diff_percent) +
+                     "---计数: " + str(trigger_count[currency]))
 
-        trigger = TRIGGER_LIST[i]
-        if diff >= trigger:
+        # trigger = TRIGGER_LIST[i]
+        if diff_percent >= TRIGGER_PERCENT:
             trigger_count[currency] += 1
 
 
