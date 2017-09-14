@@ -43,7 +43,7 @@ class PublicClient(object):
     def depth(self, symbol):
         path = 'depth/%s' % symbol
         resp = self._get(url_for(path))
-        if resp is not None:
+        if resp is not None and symbol in resp:
             data = {
                 u'bids': [],
                 u'asks': []
@@ -144,10 +144,32 @@ class PrivateClient(PublicClient):
         return self.trade(symbol, 'sell', price, amount)
 
     def get_order(self, order_id):
+        """
+        response detail
+        {
+            'stat': {
+                'isSuccess': True,
+                'errors': 'None',
+                'serverTime': '00:00:00.0010993',
+                'time': '00:00:08.7011518'},
+            'return': {
+                '63613389': {
+                    'status': 0,
+                    'timestamp_created': 1505352914,
+                    'rate': 0.01501,
+                    'amount': 0.1,
+                    'pair': 'ltc_btc',
+                    'start_amount': 0.1,
+                    'type': u'buy'
+                 }
+            },
+            'success': 1}
+        """
         params = {"order_id": order_id}
         resp = self._post('OrderInfo', params)
+        print(str(resp))
         if resp is not None:
-            return dict_to_order(resp)
+            return dict_to_order(resp, order_id)
 
     def cancel_order(self, order_id):
         params = {"order_id": order_id}
@@ -175,17 +197,18 @@ def dict_to_order_result(resp):
             return order.OrderResult(code=resp[u'code'], error=resp[u'error'])
 
 
-def dict_to_order(resp):
-    resp = resp[u'return']
-    order_id = resp.keys()[0]
-    if order_id is not None:
-        resp = resp[order_id]
-        price = resp[u'rate']
-        amount = resp[u'start_amount']
-        deal_amount = resp[u'amount']
-        order_type = resp[u'type']
-        order_status = order.get_status(constant.EX_LQ, resp[u'status'])
-        return order.Order(order_id, price, order_status, order_type, amount, deal_amount)
+def dict_to_order(resp, order_id_int):
+    if u'return' in resp:
+        resp1 = resp[u'return']
+        order_id = str(order_id_int)
+        if order_id is not None:
+            data = resp1[order_id]
+            price = data[u'rate']
+            amount = data[u'start_amount']
+            deal_amount = data[u'amount']
+            order_type = data[u'type']
+            order_status = order.get_status(constant.EX_LQ, data[u'status'])
+            return order.Order(order_id, price, order_status, order_type, amount, deal_amount)
 
 
 def dict_to_account(resp):

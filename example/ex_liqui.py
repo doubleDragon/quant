@@ -22,5 +22,20 @@ client = Client(settings.LIQUI_API_KEY, settings.LIQUI_API_SECRET)
 #     print('lq btc not enough to sell, code is 832')
 
 
+# get order info
+r_order = client.get_order(63613389)
+if r_order is not None:
+    print("%s status is %s" % (r_order.order_id,r_order.status))
+    if r_order.is_closed():
+        print("%s is closed" % r_order.order_id)
+    else:
+        if r_order.is_canceled():
+            print("%s is canceled" % r_order.order_id)
+        else:
+            print("%s is pending" % r_order.order_id)
+else:
+    order_id = 63613389
+    print("%d order info failed" % order_id)
+
 # cancel
-# print(client.cancel_order('63408509'))
+print(client.cancel_order(63613389))

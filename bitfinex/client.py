@@ -11,7 +11,7 @@ import time
 
 from decimal import Decimal
 
-from common import depth, constant, order, account
+from common import depth, constant, order, account, ticker
 
 PROTOCOL = "https"
 HOST = "api.bitfinex.com"
@@ -73,12 +73,7 @@ class PublicClient:
         """
         resp = self._get(self.url_for('ticker/%s', symbol.lower()))
         if resp is not None:
-            data = {
-                u'sell': Decimal(resp[u'ask']),
-                u'buy': Decimal(resp[u'buy']),
-                u'last': Decimal(resp[u'last_price'])
-            }
-            return data
+            return dict_to_ticker(resp)
 
     def depth(self, symbol, parameters=None):
         """
@@ -339,3 +334,11 @@ def dict_to_order_result(resp):
             return order.OrderResult(error='order id not exists')
     else:
         return order.OrderResult(error='unknown error, may be balance not enough')
+
+
+def dict_to_ticker(resp):
+    sell = Decimal(resp[u'ask'])
+    buy = Decimal(resp[u'bid'])
+    last = Decimal(resp[u'last_price'])
+    data = ticker.Ticker(buy=buy, sell=sell, last=last)
+    return data

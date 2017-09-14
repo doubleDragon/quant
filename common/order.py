@@ -27,7 +27,9 @@ class Order(object):
         self.order_type = order_type
         self.amount = amount
         self.deal_amount = deal_amount
-        print('init========>' + str(type(status)) + '----value: ' + str(status))
+        print('__init__============>deal_amount type: ' + str(type(deal_amount)))
+        print('__init__============>amount type: ' + str(type(amount)))
+
 
     def __repr__(self):
         data = {
@@ -57,6 +59,9 @@ class Order(object):
     def is_canceled(self):
         return self.status == constant.ORDER_STATE_CANCELED
 
+    def is_pending(self):
+        return self.status == constant.ORDER_STATE_PENDING
+
 
 class OrderResult(object):
     """
@@ -82,6 +87,8 @@ def get_status(ex_name, origin_status):
     if ex_name == constant.EX_OKEX:
         return convert_ok_status(origin_status)
     if ex_name == constant.EX_BFX:
+        # bfx不走这， 有个bug: get_status后返回的类型为tuple, 希望是int
+        # 解决方案：尝试原样转换，和lq一样
         return origin_status
     if ex_name == constant.EX_LQ:
         return convert_lq_status(origin_status)
