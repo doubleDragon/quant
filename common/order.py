@@ -27,9 +27,6 @@ class Order(object):
         self.order_type = order_type
         self.amount = amount
         self.deal_amount = deal_amount
-        print('__init__============>deal_amount type: ' + str(type(deal_amount)))
-        print('__init__============>amount type: ' + str(type(amount)))
-
 
     def __repr__(self):
         data = {

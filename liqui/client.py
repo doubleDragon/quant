@@ -35,7 +35,7 @@ class PublicClient(object):
         try:
             response = requests.get(url, timeout=TIMEOUT)
         except requests.exceptions.RequestException as e:
-            print('OKCoin get' + url + ' failed: ' + str(e))
+            print('liqui get' + url + ' failed: ' + str(e))
         else:
             if response.status_code == requests.codes.ok:
                 return response.json()
@@ -64,8 +64,12 @@ class PublicClient(object):
                 ask_dict = dict(zip(tmp, asks[i]))
                 ask_dict = dict(zip(ask_dict.keys(), map(fn, ask_dict.values())))
 
+                # bid_dict = dict(zip(tmp, bids[i]))
+                # ask_dict = dict(zip(tmp, asks[i]))
+
                 data[u'bids'].append(bid_dict)
                 data[u'asks'].append(ask_dict)
+
             return depth.dict_to_depth(data)
 
 
@@ -138,7 +142,7 @@ class PrivateClient(PublicClient):
         return dict_to_order_result(resp)
 
     def buy(self, symbol, price, amount):
-        return self.trade(symbol, 'buy', price, amount)
+        return self.trade(symbol=symbol, ttype='buy', trate=price, tamount=amount)
 
     def sell(self, symbol, price, amount):
         return self.trade(symbol, 'sell', price, amount)
@@ -157,9 +161,9 @@ class PrivateClient(PublicClient):
                     'status': 0,
                     'timestamp_created': 1505352914,
                     'rate': 0.01501,
-                    'amount': 0.1,
+                    'amount': 0.1,                      //这个是未成交数
                     'pair': 'ltc_btc',
-                    'start_amount': 0.1,
+                    'start_amount': 0.1,                //初始订单数,  成交数=start-amount
                     'type': u'buy'
                  }
             },
@@ -167,7 +171,6 @@ class PrivateClient(PublicClient):
         """
         params = {"order_id": order_id}
         resp = self._post('OrderInfo', params)
-        print(str(resp))
         if resp is not None:
             return dict_to_order(resp, order_id)
 
@@ -175,8 +178,13 @@ class PrivateClient(PublicClient):
         params = {"order_id": order_id}
         resp = self._post('CancelOrder', params)
         if resp is not None:
-            print(str(resp))
             return resp[u'success'] == 1
+
+    def trade_history(self, symbol):
+        params = {
+            "pair": symbol
+        }
+        return self._post('TradeHistory', params)
 
 
 def dict_to_order_result(resp):
@@ -186,11 +194,12 @@ def dict_to_order_result(resp):
         if resp[u'success'] == 1:
             if (u'return' in resp) and (u'order_id' in resp[u'return']):
                 order_id = resp[u'return'][u'order_id']
-                if order_id > 0:
-                    # 下单成功
-                    return order.OrderResult(order_id=order_id)
-                else:
-                    return order.OrderResult(error='order id less than 0')
+                return order.OrderResult(order_id=order_id)
+                # if order_id > 0:
+                #     # 下单成功
+                #     return order.OrderResult(order_id=order_id)
+                # else:
+                #     return order.OrderResult(error='order id less than 0, id=' + str(order_id))
             else:
                 return order.OrderResult(error='stat is success but not return order id')
         else:
@@ -205,7 +214,7 @@ def dict_to_order(resp, order_id_int):
             data = resp1[order_id]
             price = data[u'rate']
             amount = data[u'start_amount']
-            deal_amount = data[u'amount']
+            deal_amount = amount - data[u'amount']
             order_type = data[u'type']
             order_status = order.get_status(constant.EX_LQ, data[u'status'])
             return order.Order(order_id, price, order_status, order_type, amount, deal_amount)

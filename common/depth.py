@@ -56,4 +56,4 @@ def dict_to_depth(data):
         amount = data[u'asks'][i][u'amount']
         asks.append(Item(price, amount))
 
-    return Depth(bids, bids)
+    return Depth(bids=bids, asks=asks)
