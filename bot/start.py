@@ -35,18 +35,38 @@ logger.addHandler(ch)
 bfxClient = BfxClient(settings.BFX_API_KEY, settings.BFX_API_SECRET)
 lqClient = LqClient(settings.LIQUI_API_KEY, settings.LIQUI_API_SECRET)
 
-# SYMBOL_BFX = u'ltcbtc'
-# SYMBOL_OK = u'ltc_btc'
-# SYMBOL_LTC = u'ltc'
-
-# PAIR_ETH = True 表示eth交易对，目前支持omg和eos
+"""
+是否使用eth交易对， 未调试过, 不要轻易使用
+"""
 PAIR_ETH = False
-CURRENCY = 'eos'
-# 差价百分比触发为0.7%
-DIFF_TRIGGER = Decimal('0.7')
+CURRENCY = 'eth'
+"""差价触发百分比，不能低于0.7"""
+DIFF_TRIGGER = Decimal('0.8')
 
-# ltc单次交易数量 ,  eos 设置成1, eth和ltc 设置成0.1
-AMOUNT_ONCE = Decimal('1')
+"""
+单次交易的数量, 各个币种如下:
+    1, eth: 0.1
+    2, ltc: 0.1
+    3, eos: 1
+"""
+AMOUNT_ONCE = Decimal('0.1')
+
+
+"""
+平台单次交易的最小数量,各个平台标准不一样:
+    1,lq的限制是每次的total不能低于0.0001, 
+    2,bfx暂定为0.01
+该参数暂时只对bfx有效， 各个币种不一样, 比如辣条根据botvs的标准是0.01, 
+暂时设置成这样，出了问题再调整
+"""
+AMOUNT_MIN = Decimal('0.01')
+
+# 单次交易最小的btc量，计算是amount * price
+"""
+liqui平台的限制，买卖单的btc total必须大于0.0001, 该参数暂时只对liqui平台有效
+liqui各个币种都遵循这个标准, 所以liqui只要处理好这个就行
+"""
+PRICE_MIN = Decimal('0.0001')
 
 FEE_BFX = Decimal('0.2')
 FEE_LQ = Decimal('0.25')
@@ -60,12 +80,6 @@ DEPTH_INDEX_BFX = 1
 
 MAX_DELAY = Decimal('3000')
 
-# 单次交易最小的btc量，计算是amount * price
-PRICE_MIN = Decimal('0.0001')
-
-# ltc单次交易的最小数量, 平台限制,lqcoin计算每次的total, bfx为0.01, 所以okex这里也设置为0.1
-AMOUNT_MIN = Decimal('0.1')
-
 # max_amount的几分之一
 AMOUNT_RATE = Decimal('2')
 
@@ -76,8 +90,8 @@ AMOUNT_RETAIN = Decimal('0.001')
 SLIDE_PRICE = Decimal('0')
 
 D_FORMAT = Decimal('0.00000000')
-FORMAT_FOUR = Decimal('0.0000')
-FORMAT_FIVE = Decimal('0.00000')
+
+all_stop = False
 
 
 def cancel_all_orders():
@@ -292,7 +306,7 @@ def on_action_trade(state):
     buy_price_and_fee = buy_price_real * (state.lq.fee / Decimal('100') + Decimal('1'))
     can_buy = (balance_btc_lq - AMOUNT_RETAIN) / buy_price_and_fee
     buy_order_amount = min(max_amount_lq, can_buy)
-    buy_order_price_total = (buy_order_amount * buy_price_and_fee).quantize(FORMAT_FIVE)
+    buy_order_price_total = (buy_order_amount * buy_price_and_fee).quantize(D_FORMAT)
 
     balance_enough_lq = (buy_order_amount >= AMOUNT_ONCE) and (buy_order_amount >= AMOUNT_MIN)
     total_enough_lq = buy_order_price_total > PRICE_MIN
@@ -311,7 +325,7 @@ def on_action_trade(state):
     """
     max_amount_bfx = state.bfx.ticker.buy.max_amount
     sell_order_amount = max_amount_bfx / AMOUNT_RATE
-    balance_enough_bfx = (sell_order_amount >= AMOUNT_MIN) and (buy_order_amount >= AMOUNT_ONCE)
+    balance_enough_bfx = (sell_order_amount >= AMOUNT_MIN) and (sell_order_amount >= AMOUNT_ONCE)
     if balance_enough_bfx:
         state.bfx.can_sell = sell_order_amount
     else:
@@ -332,15 +346,17 @@ def on_action_trade(state):
     计算买卖交易的最大amount
     """
     buy_amount = min(AMOUNT_ONCE, state.lq.can_buy, state.bfx.can_sell)
-    buy_amount_real = buy_amount * (state.lq.fee / Decimal('100') + Decimal('1'))
-    buy_amount_real = buy_amount_real.quantize(FORMAT_FOUR)
+    buy_amount_fee = buy_amount * (state.lq.fee / Decimal('100'))
+    buy_amount_real = buy_amount + buy_amount_fee
     buy_order_total = buy_amount_real * buy_price_real
     if buy_order_total < PRICE_MIN:
-        logger.debug("当前订单liqui的btc total %s小于0.0001, 循环退出" % str(buy_order_total))
+        logger.debug("当前订单liqui的btc total %s小于0.0001, 循环退出" % str(state.lq.fee))
         return
     # lq下买单
+    print('不加手续费数量是: %s,  手续费是: %s' % (str(buy_amount), str(state.lq.fee)))
     logger.info("当前liqui 委买单======> 价格: %s, 数量: %s" % (str(buy_price_real), str(buy_amount_real)))
-    buy_order_result = lqClient.buy(get_symbol(constant.EX_LQ, CURRENCY), buy_price_real, buy_amount_real)
+    buy_order_result = lqClient.buy(symbol=get_symbol(constant.EX_LQ, CURRENCY), price=buy_price_real,
+                                    amount=buy_amount_real)
     if buy_order_result is None:
         logger.info("当前liqui委买单失败, 退出循环")
         return
@@ -354,8 +370,9 @@ def on_action_trade(state):
     liqui 下单如果order_id返回0那么表示已成交
     """
     if int(buy_order_result.order_id) == 0:
+        """buy_amount是不带手续费"""
+        logger.info("当前liqui买单的成交量%s, 订单id: %s" % (str(buy_amount_real), str(buy_order_result.order_id)))
         buy_deal_amount = buy_amount
-        logger.info("当前liqui买单的成交量%s, 订单id: %s" % (str(buy_deal_amount), str(buy_order_result.order_id)))
     else:
         """没有马上完全成交，则查询order的成交数量"""
         time.sleep(TICK_INTERVAL)
@@ -366,6 +383,8 @@ def on_action_trade(state):
         if buy_deal_amount < AMOUNT_MIN:
             logger.info('当前liqui买单成交量%s小于AMOUNT_MIN, 循环退出' % str(buy_deal_amount))
             return
+        """这里如果成交了部分，需要减去手续费"""
+        buy_deal_amount = buy_deal_amount - buy_amount_fee
 
     # bfx期货准备开空单, 数量和lq买单成交的量相同
     sell_amount = buy_deal_amount
@@ -404,6 +423,9 @@ def on_action_trade(state):
 
                 diff_amount = Decimal(str(sell_amount)) - Decimal(str(sell_deal_amount))
                 if diff_amount < AMOUNT_MIN:
+                    """all_stop只是调试用，仅成交一个循环"""
+                    # global all_stop
+                    # all_stop = True
                     logger.info('当前liqui和bitfinex交易循环完成')
                     break
                 """更新数量"""
@@ -444,6 +466,8 @@ def on_tick():
 def main():
     init()
     while True:
+        if all_stop:
+            break
         time.sleep(TICK_INTERVAL)
         on_tick()
 
