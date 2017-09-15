@@ -18,7 +18,7 @@ client = BfxClient(API_KEY, API_SECRET)
 # print(client.ticker('ltcusd'))
 
 # depth
-print(client.depth('eosbtc'))
+print(client.depth('dashbtc'))
 
 
 # trade
