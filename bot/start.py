@@ -278,7 +278,7 @@ def on_action_trade(state):
             btc_lq = i
 
     if btc_lq is None:
-        raise ValueError('lq account not exist btc')
+        raise ValueError('liquiq账户不存在btc')
 
     balance_btc_lq = Decimal(repr(btc_lq.balance))
     if state.lq.is_maker:
@@ -318,11 +318,14 @@ def on_action_trade(state):
         state.bfx.can_sell = 0
 
     if state.lq.can_buy <= 0:
-        logger.info('差价满足但是lq的btc数量或不足，或者当前深度不满足AmountOnce要求')
+        logger.info("当前差价满足但是lq的btc数量%s不足，或者买单数量%s不满足AmountOnce要求, 循环退出" %
+                    (balance_btc_lq, buy_order_amount))
         return
     if state.bfx.can_sell <= 0:
-        logger.info('差价满足但是bfx margin账户余额不足')
+        logger.info("当前差价满足但是bfx的卖单数量%s不足, 循环退出" % sell_order_amount)
         return
+
+    logger.info("当前最多能买%s, 最能能卖%s" % (state.lq.can_buy, state.bfx.can_sell))
 
     """
     这里是先在lq买进现货，然后在bfx开同等数量的空单
@@ -333,44 +336,42 @@ def on_action_trade(state):
     buy_amount_real = buy_amount_real.quantize(FORMAT_FOUR)
     buy_order_total = buy_amount_real * buy_price_real
     if buy_order_total < PRICE_MIN:
-        logger.debug("lq btc total %s less than 0.0001" % buy_order_total)
+        logger.debug("当前订单liqui的btc total %s小于0.0001, 循环退出" % str(buy_order_total))
         return
     # lq下买单
-    logger.info("lq 委买单======>  price: " + str(buy_price_real) + "   amount: " + str(buy_amount_real) +
-                "   diff" + str(state.diff))
+    logger.info("当前liqui 委买单======> 价格: %s, 数量: %s" % (str(buy_price_real), str(buy_amount_real)))
     buy_order_result = lqClient.buy(get_symbol(constant.EX_LQ, CURRENCY), buy_price_real, buy_amount_real)
     if buy_order_result is None:
-        logger.info('lq 委买单失败, 直接return')
+        logger.info("当前liqui委买单失败, 退出循环")
         return
     if buy_order_result.error is not None:
-        logger.info("lq 委买单失败, %s" % str(buy_order_result.error))
+        logger.info("lq 委买单失败, 原因: %s, 循环退出" % str(buy_order_result.error))
         return
 
-    logger.info("lq 委买单成功, 订单id %s" % str(buy_order_result.order_id))
+    logger.info("当前liqui 委买单成功, 订单id: %s" % str(buy_order_result.order_id))
 
     """
     liqui 下单如果order_id返回0那么表示已成交
     """
     if int(buy_order_result.order_id) == 0:
         buy_deal_amount = buy_amount_real
-        logger.info("lq买单的成交量: " + str(buy_deal_amount) + "  order_id: " + str(buy_order_result.order_id))
+        logger.info("当前liqui买单的成交量%s, 订单id: %s" % (str(buy_deal_amount), str(buy_order_result.order_id)))
     else:
         """没有马上完全成交，则查询order的成交数量"""
         time.sleep(TICK_INTERVAL)
         buy_deal_amount = get_deal_amount(constant.EX_LQ, buy_order_result.order_id)
-        logger.info("lq买单的成交量: " + str(buy_deal_amount) + "  order_id: " + str(buy_order_result.order_id))
+        logger.info("当前liqui买单的成交量%s, 订单id: %s" % (str(buy_deal_amount), str(buy_order_result.order_id)))
         """这里需要增加限制，如果已经成交的部分不满足bfx的下单要求，则直接return, 也就是说成交量太小了直接结束本次交易"""
         """目前还不知道bfx最低交易限制，所以先用自定义的AMOUNT_MIN判断"""
         if buy_deal_amount < AMOUNT_MIN:
-            logger.info('lq买单成交量小于AMOUNT_MIN, 直接return')
+            logger.info('当前liqui买单成交量%s小于AMOUNT_MIN, 循环退出' % str(buy_deal_amount))
             return
 
     # bfx期货准备开空单, 数量和lq买单成交的量相同
     sell_amount = buy_deal_amount
     sell_price = state.bfx.ticker.buy.price - SLIDE_PRICE
     while True:
-        logger.info("bfx 开空单======>  price: " + str(sell_price) + "   amount: " + str(sell_amount) +
-                    "   diff" + str(state.diff))
+        logger.info("当前bitfinex开空单======>价格: %s,  数量: %s" % (str(sell_price), str(sell_amount)))
         """
         由于bfx直接返回了order对象，所以这里用order.Order对象来接收，接着就可以
         bfx流程如下:
@@ -382,28 +383,28 @@ def on_action_trade(state):
         sell_order = bfxClient.margin_sell(get_symbol(constant.EX_BFX, CURRENCY), sell_amount, sell_price)
         if sell_order is None or sell_order.order_id is None:
             """开空单直接失败，继续循环开空单"""
-            logger.info("bitfinex开空单失败")
+            logger.info("当前bitfinex开空单失败, 0.5秒后重试")
             time.sleep(INTERVAL)
             continue
         else:
             """开空单成功，检查是否完成"""
             if sell_order.is_closed():
                 """已全部成交，终止本次流程"""
-                logger.info('$s订单直接完成，交易循环完成' % sell_order.order_id)
+                logger.info("当前bitfinex订单%s直接完成，交易循环完成" % str(sell_order.order_id))
                 break
             else:
                 if sell_order.is_canceled():
                     """正常情况下不会是取消，不排除系统强制给取消了"""
-                    logger.info("订单处于取消状态，异常状态需要排查")
+                    logger.info("当前bitfinex订单%s处于取消状态，异常状态需要排查" % str(sell_order.order_id))
 
                 """查询成交量"""
                 time.sleep(INTERVAL)
                 sell_deal_amount = get_deal_amount(constant.EX_BFX, sell_order.order_id)
-                logger.info("bfx卖单的成交量: " + str(sell_deal_amount) + "  order_id: " + str(sell_order.order_id))
+                logger.info("当前bitfinex卖单的成交量: %s, 订单id: %s" % (str(sell_deal_amount), str(sell_order.order_id)))
 
                 diff_amount = Decimal(str(sell_amount)) - Decimal(str(sell_deal_amount))
                 if diff_amount < AMOUNT_MIN:
-                    logger.info('交易循环完成')
+                    logger.info('当前liqui和bitfinex交易循环完成')
                     break
                 """更新数量"""
                 sell_amount = diff_amount
