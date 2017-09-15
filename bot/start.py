@@ -369,7 +369,7 @@ def on_action_trade(state):
             return
 
     # bfx期货准备开空单, 数量和lq买单成交的量相同
-    sell_amount = buy_deal_amount - buy_amount_fee
+    sell_amount = buy_deal_amount * (1 - state.lq.fee / Decimal('100'))
     sell_price = state.bfx.ticker.buy.price - SLIDE_PRICE
     while True:
         logger.info("当前bitfinex开空单======>价格: %s,  数量: %s" % (str(sell_price), str(sell_amount)))
