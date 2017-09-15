@@ -49,7 +49,7 @@ DIFF_TRIGGER = Decimal('0.7')
 AMOUNT_ONCE = Decimal('1')
 
 FEE_BFX = Decimal('0.2')
-FEE_LQ = Decimal('0')
+FEE_LQ = Decimal('0.25')
 
 INTERVAL = 0.5
 TICK_INTERVAL = 1
@@ -353,6 +353,7 @@ def on_action_trade(state):
     """
     liqui 下单如果order_id返回0那么表示已成交
     """
+    buy_amount_fee = buy_amount * (state.lq.fee / Decimal('100'))
     if int(buy_order_result.order_id) == 0:
         buy_deal_amount = buy_amount_real
         logger.info("当前liqui买单的成交量%s, 订单id: %s" % (str(buy_deal_amount), str(buy_order_result.order_id)))
@@ -368,7 +369,7 @@ def on_action_trade(state):
             return
 
     # bfx期货准备开空单, 数量和lq买单成交的量相同
-    sell_amount = buy_deal_amount
+    sell_amount = buy_deal_amount - buy_amount_fee
     sell_price = state.bfx.ticker.buy.price - SLIDE_PRICE
     while True:
         logger.info("当前bitfinex开空单======>价格: %s,  数量: %s" % (str(sell_price), str(sell_amount)))

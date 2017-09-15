@@ -33,7 +33,6 @@ CURRENCY_ETH = u'eth'
 CURRENCY_OMG = u'omg'
 CURRENCY_EOS = u'eos'
 
-CURRENCIES = [CURRENCY_ETH, CURRENCY_LTC, CURRENCY_OMG, CURRENCY_EOS]
 # TRIGGER_LIST = [Decimal('0.00043'), Decimal('0.000095'), Decimal('0.000095'), Decimal('0.000095')]
 
 # DIFF_TRIGGER = Decimal('0.000095')
@@ -46,24 +45,38 @@ DEPTH_INDEX_LQ = 0
 
 TRIGGER_PERCENT = Decimal('0.7')
 
+CURRENCIES = [CURRENCY_ETH, CURRENCY_LTC, CURRENCY_OMG, CURRENCY_EOS]
 trigger_count = {
     CURRENCY_ETH: 0,
     CURRENCY_LTC: 0,
     CURRENCY_OMG: 0,
     CURRENCY_EOS: 0
 }
+is_eth = False
+# CURRENCIES = [CURRENCY_OMG, CURRENCY_EOS]
+# trigger_count = {
+#     CURRENCY_OMG: 0,
+#     CURRENCY_EOS: 0
+# }
 
 D_FORMAT = Decimal('0.00000000')
+
+
+def get_symbol(ex_name, currency):
+    if is_eth is True:
+        return util.get_symbol_eth(ex_name, currency)
+    else:
+        return util.get_symbol_btc(ex_name, currency)
 
 
 def on_tick():
     for i in range(len(CURRENCIES)):
         currency = CURRENCIES[i]
 
-        depth_lq = lqClient.depth(util.get_symbol_btc(constant.EX_LQ, currency))
+        depth_lq = lqClient.depth(get_symbol(constant.EX_LQ, currency))
         if depth_lq is None:
             return
-        depth_bfx = bfxClient.depth(util.get_symbol_btc(constant.EX_BFX, currency))
+        depth_bfx = bfxClient.depth(get_symbol(constant.EX_BFX, currency))
         if depth_bfx is None:
             return
         sell_price_lq = depth_lq.asks[DEPTH_INDEX_LQ].price
