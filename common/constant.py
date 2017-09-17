@@ -21,6 +21,7 @@ ORDER_STATE_CANCELED = 4
 EX_OKEX = 'okex'
 EX_BFX = 'bitfinex'
 EX_LQ = 'liqui'
+EX_DGAX = 'gdax'
 
 """
 lq 要用到的错误码

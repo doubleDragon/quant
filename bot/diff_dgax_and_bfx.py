@@ -6,9 +6,8 @@
 import time
 from decimal import Decimal
 
-from bitfinex.client import PrivateClient as BfxClient
-from config import settings
-from liqui.client import PublicClient as LiquiClient
+from bitfinex.client import PublicClient as BfxClient
+from gdax.client import PublicClient as GdaxClient
 
 from common import constant, util
 
@@ -16,7 +15,7 @@ import logging
 
 logger = logging.getLogger('diff')
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('diff.log')
+fh = logging.FileHandler('diff_dgax_and_bfx.log')
 fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
@@ -38,54 +37,41 @@ CURRENCY_DASH = u'dash'
 
 # DIFF_TRIGGER = Decimal('0.000095')
 
-bfxClient = BfxClient(settings.BFX_API_KEY, settings.BFX_API_SECRET)
-lqClient = LiquiClient()
+bfxClient = BfxClient()
+gdaxClient = GdaxClient()
 
 DEPTH_INDEX_BFX = 1
-DEPTH_INDEX_LQ = 0
+DEPTH_INDEX_DGAX = 0
 
 TRIGGER_PERCENT = Decimal('0.7')
+is_maker = True
 
 CURRENCIES = [CURRENCY_ETH, CURRENCY_LTC, CURRENCY_OMG, CURRENCY_EOS, CURRENCY_DASH]
 trigger_count = {
     CURRENCY_ETH: 0,
     CURRENCY_LTC: 0,
-    CURRENCY_OMG: 0,
-    CURRENCY_EOS: 0,
-    CURRENCY_DASH: 0
 }
-is_maker = True
-is_eth = False
-# CURRENCIES = [CURRENCY_OMG, CURRENCY_EOS]
-# trigger_count = {
-#     CURRENCY_OMG: 0,
-#     CURRENCY_EOS: 0
-# }
 
 D_FORMAT = Decimal('0.00000000')
 
 
 def get_symbol(ex_name, currency):
-    if is_eth is True:
-        return util.get_symbol_eth(ex_name, currency)
-    else:
-        return util.get_symbol_btc(ex_name, currency)
+    return util.get_symbol_btc(ex_name, currency)
 
 
 def on_tick():
     for i in range(len(CURRENCIES)):
         currency = CURRENCIES[i]
 
-        depth_lq = lqClient.depth(get_symbol(constant.EX_LQ, currency))
-        if depth_lq is None:
+        depth_dgax = gdaxClient.depth(get_symbol(constant.EX_DGAX, currency))
+        if depth_dgax is None:
             return
         depth_bfx = bfxClient.depth(get_symbol(constant.EX_BFX, currency))
         if depth_bfx is None:
             return
-        sell_price_lq = depth_lq.asks[DEPTH_INDEX_LQ].price
-        buy_price_lq = depth_lq.asks[DEPTH_INDEX_LQ].price
+        sell_price_lq = depth_dgax.asks[DEPTH_INDEX_DGAX].price
+        buy_price_lq = depth_dgax.bids[DEPTH_INDEX_DGAX].price
         buy_price_bfx = depth_bfx.bids[DEPTH_INDEX_BFX].price
-
         if is_maker:
             diff = buy_price_bfx - buy_price_lq
             diff_percent = diff / buy_price_lq * Decimal('100')

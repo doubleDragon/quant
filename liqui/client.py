@@ -51,7 +51,7 @@ class PublicClient(object):
             tmp = [u'price', u'amount']
 
             def fn(x):
-                return Decimal(repr(x))
+                return Decimal(str(x))
 
             asks = resp[symbol][u'asks']
             bids = resp[symbol][u'bids']

@@ -41,7 +41,7 @@ lqClient = LqClient(settings.LIQUI_API_KEY, settings.LIQUI_API_SECRET)
 PAIR_ETH = False
 CURRENCY = 'eth'
 """差价触发百分比，不能低于0.7"""
-DIFF_TRIGGER = Decimal('0.8')
+DIFF_TRIGGER = Decimal('0.7')
 
 """
 单次交易的数量, 各个币种如下:
@@ -49,7 +49,7 @@ DIFF_TRIGGER = Decimal('0.8')
     2, ltc: 0.1
     3, eos: 1
 """
-AMOUNT_ONCE = Decimal('0.1')
+AMOUNT_ONCE = Decimal('1')
 
 
 """
@@ -68,6 +68,9 @@ liqui各个币种都遵循这个标准, 所以liqui只要处理好这个就行
 """
 PRICE_MIN = Decimal('0.0001')
 
+"""liqui如果走maker需要设置该参数"""
+SLIDE_PRICE = Decimal('0.0000001')
+
 FEE_BFX = Decimal('0.2')
 FEE_LQ = Decimal('0.25')
 
@@ -76,7 +79,7 @@ TICK_INTERVAL = 1
 
 # 取深度里的第几条数据, 总公5条
 DEPTH_INDEX_LQ = 0
-DEPTH_INDEX_BFX = 1
+DEPTH_INDEX_BFX = 2
 
 MAX_DELAY = Decimal('3000')
 
@@ -85,9 +88,6 @@ AMOUNT_RATE = Decimal('2')
 
 # 账户内保留的stock数，这里指的是lq的btc量
 AMOUNT_RETAIN = Decimal('0.001')
-
-# ltc交易滑价，暂时不用
-SLIDE_PRICE = Decimal('0')
 
 D_FORMAT = Decimal('0.00000000')
 
@@ -353,7 +353,6 @@ def on_action_trade(state):
         logger.debug("当前订单liqui的btc total %s小于0.0001, 循环退出" % str(state.lq.fee))
         return
     # lq下买单
-    print('不加手续费数量是: %s,  手续费是: %s' % (str(buy_amount), str(state.lq.fee)))
     logger.info("当前liqui 委买单======> 价格: %s, 数量: %s" % (str(buy_price_real), str(buy_amount_real)))
     buy_order_result = lqClient.buy(symbol=get_symbol(constant.EX_LQ, CURRENCY), price=buy_price_real,
                                     amount=buy_amount_real)
@@ -424,8 +423,8 @@ def on_action_trade(state):
                 diff_amount = Decimal(str(sell_amount)) - Decimal(str(sell_deal_amount))
                 if diff_amount < AMOUNT_MIN:
                     """all_stop只是调试用，仅成交一个循环"""
-                    # global all_stop
-                    # all_stop = True
+                    global all_stop
+                    all_stop = True
                     logger.info('当前liqui和bitfinex交易循环完成')
                     break
                 """更新数量"""
@@ -455,7 +454,8 @@ def on_tick():
     if 'exception' in state.keys() and state.exception is not None:
         logger.debug(str(state.exception))
         return
-    logger.debug("当前价差========>{buy: " + str(state.lq.ticker.sell.price) +
+    buy_price = state.lq.ticker.buy.price if state.lq.is_maker else state.lq.ticker.sell.price
+    logger.debug("当前价差========>{buy: " + str(buy_price) +
                  ", sell: " + str(state.bfx.ticker.buy.price) +
                  ", diff_percent: " + str(state.diff_percent) +
                  "}")

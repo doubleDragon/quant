@@ -3,8 +3,16 @@
 # Daniel Paquin
 #
 # For public requests to the GDAX exchange
+from decimal import Decimal
 
 import requests
+
+from common import depth
+
+BASE_URL = 'https://api.gdax.com'
+
+# HTTP request timeout in seconds
+TIMEOUT = 5.0
 
 
 class PublicClient(object):
@@ -18,14 +26,23 @@ class PublicClient(object):
 
     """
 
-    def __init__(self, api_url='https://api.gdax.com'):
+    def __init__(self):
         """Create GDAX API public client.
 
         Args:
             api_url (Optional[str]): API URL. Defaults to GDAX API.
 
         """
-        self.url = api_url.rstrip('/')
+        self.url = BASE_URL
+
+    def _get(self, url, params=None):
+        try:
+            response = requests.get(url, params=params, timeout=TIMEOUT)
+        except requests.exceptions.RequestException as e:
+            print('gdax get' + url + ' failed: ' + str(e))
+        else:
+            if response.status_code == requests.codes.ok:
+                return response.json()
 
     def get_products(self):
         """Get a list of available currency pairs for trading.
@@ -45,11 +62,10 @@ class PublicClient(object):
                 ]
 
         """
-        r = requests.get(self.url + '/products', timeout=30)
-        # r.raise_for_status()
-        return r.json()
+        url = self.url + '/products'
+        return self._get(url=url)
 
-    def get_product_order_book(self, product_id, level=1):
+    def depth(self, product_id, level=2):
         """Get a list of open orders for a product.
 
         The amount of detail shown can be customized with the `level`
@@ -85,12 +101,36 @@ class PublicClient(object):
 
         """
         params = {'level': level}
-        r = requests.get(self.url + '/products/{}/book'
-                         .format(product_id), params=params, timeout=30)
-        # r.raise_for_status()
-        return r.json()
+        url = self.url + '/products/{}/book'.format(product_id)
 
-    def get_product_ticker(self, product_id):
+        resp = self._get(url, params)
+        if resp is not None:
+            data = {
+                u'bids': [],
+                u'asks': []
+            }
+            tmp = [u'price', u'amount']
+
+            def fn(x):
+                return Decimal(str(x))
+
+            asks = resp[u'asks']
+            bids = resp[u'bids']
+
+            for i in range(5):
+                # bid is a array
+                bid_dict = dict(zip(tmp, bids[i]))
+                bid_dict = dict(zip(bid_dict.keys(), map(fn, bid_dict.values())))
+
+                ask_dict = dict(zip(tmp, asks[i]))
+                ask_dict = dict(zip(ask_dict.keys(), map(fn, ask_dict.values())))
+
+                data[u'bids'].append(bid_dict)
+                data[u'asks'].append(ask_dict)
+
+            return depth.dict_to_depth(data)
+
+    def ticker(self, product_id):
         """Snapshot about the last trade (tick), best bid/ask and 24h volume.
 
         **Caution**: Polling is discouraged in favor of connecting via
@@ -112,10 +152,8 @@ class PublicClient(object):
                 }
 
         """
-        r = requests.get(self.url + '/products/{}/ticker'
-                         .format(product_id), timeout=30)
-        # r.raise_for_status()
-        return r.json()
+        url = self.url + '/products/{}/ticker'.format(product_id)
+        return self._get(url=url)
 
     def get_product_trades(self, product_id):
         """List the latest trades for a product.
