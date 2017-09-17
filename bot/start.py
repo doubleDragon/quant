@@ -49,7 +49,7 @@ DIFF_TRIGGER = Decimal('0.7')
     2, ltc: 0.1
     3, eos: 1
 """
-AMOUNT_ONCE = Decimal('1')
+AMOUNT_ONCE = Decimal('0.1')
 
 
 """
@@ -423,8 +423,8 @@ def on_action_trade(state):
                 diff_amount = Decimal(str(sell_amount)) - Decimal(str(sell_deal_amount))
                 if diff_amount < AMOUNT_MIN:
                     """all_stop只是调试用，仅成交一个循环"""
-                    global all_stop
-                    all_stop = True
+                    # global all_stop
+                    # all_stop = True
                     logger.info('当前liqui和bitfinex交易循环完成')
                     break
                 """更新数量"""
