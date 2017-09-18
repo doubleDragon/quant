@@ -10,21 +10,11 @@ from bitfinex.client import PrivateClient as BfxClient
 from config import settings
 from liqui.client import PublicClient as LiquiClient
 
-from common import constant, util
+from common import constant, util, log
 
 import logging
 
-logger = logging.getLogger('diff')
-logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('diff.log')
-fh.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-logger.addHandler(fh)
-logger.addHandler(ch)
+logger = log.get_logger(log_name='diff', level=logging.DEBUG)
 
 INTERVAL = 3
 

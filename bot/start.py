@@ -8,7 +8,7 @@ from config import settings
 
 from util import timestamp
 
-from common import constant, util
+from common import constant, util, log
 
 import time
 from decimal import Decimal
@@ -20,17 +20,7 @@ from bunch import Bunch
 
 import logging
 
-logger = logging.getLogger('wsl')
-logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler('logging.log')
-fh.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-logger.addHandler(fh)
-logger.addHandler(ch)
+logger = log.get_logger(log_name='wsl', level=logging.INFO)
 
 bfxClient = BfxClient(settings.BFX_API_KEY, settings.BFX_API_SECRET)
 lqClient = LqClient(settings.LIQUI_API_KEY, settings.LIQUI_API_SECRET)
@@ -249,7 +239,7 @@ def get_deal_amount(ex_name, order_id):
             break
 
     if order_r.is_pending():
-        logger.debug("订单%s未完成,  已完成%s, 初始%s" % (order_r.order_id, order_r.deal_amount, order_r.amount))
+        logger.info("订单%s未完成,  已完成%s, 初始%s" % (order_r.order_id, order_r.deal_amount, order_r.amount))
         if ex_name == constant.EX_LQ:
             lqClient.cancel_order(order_id)
         else:
@@ -258,9 +248,9 @@ def get_deal_amount(ex_name, order_id):
         return get_deal_amount(ex_name, order_id)
     else:
         if order_r.is_canceled():
-            logger.debug("订单%s已取消,  已完成%s, 初始%s" % (order_r.order_id, order_r.deal_amount, order_r.amount))
+            logger.info("订单%s已取消,  已完成%s, 初始%s" % (order_r.order_id, order_r.deal_amount, order_r.amount))
         if order_r.is_closed():
-            logger.debug("订单%s已完成,  已完成%s, 初始%s" % (order_r.order_id, order_r.deal_amount, order_r.amount))
+            logger.info("订单%s已完成,  已完成%s, 初始%s" % (order_r.order_id, order_r.deal_amount, order_r.amount))
         return order_r.deal_amount
 
 
@@ -349,7 +339,7 @@ def on_action_trade(state):
     buy_amount_real = buy_amount + buy_amount_fee
     buy_order_total = buy_amount_real * buy_price_real
     if buy_order_total < PRICE_MIN:
-        logger.debug("当前订单liqui的btc total %s小于0.0001, 循环退出" % str(state.lq.fee))
+        logger.info("当前订单liqui的btc total %s小于0.0001, 循环退出" % str(state.lq.fee))
         return
     # lq下买单
     logger.info("当前liqui 委买单======> 价格: %s, 数量: %s" % (str(buy_price_real), str(buy_amount_real)))
@@ -442,7 +432,7 @@ def on_action_ticker(state):
         if state.delay > MAX_DELAY:
             # 延迟超过2秒，放弃这次机会
             return
-        logger.debug('差价触发,准备交易========>diff_percent: ' + str(state.diff_percent))
+        logger.info('差价触发,准备交易========>diff_percent: ' + str(state.diff_percent))
         on_action_trade(state)
 
 
@@ -455,10 +445,10 @@ def on_tick():
         logger.debug(str(state.exception))
         return
     buy_price = state.lq.ticker.buy.price if state.lq.is_maker else state.lq.ticker.sell.price
-    logger.debug("当前价差========>{buy: " + str(buy_price) +
-                 ", sell: " + str(state.bfx.ticker.buy.price) +
-                 ", diff_percent: " + str(state.diff_percent) +
-                 "}")
+    logger.info("当前价差========>{buy: " + str(buy_price) +
+                ", sell: " + str(state.bfx.ticker.buy.price) +
+                ", diff_percent: " + str(state.diff_percent) +
+                "}")
 
     on_action_ticker(state)
 

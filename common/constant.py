@@ -24,6 +24,14 @@ EX_LQ = 'liqui'
 EX_DGAX = 'gdax'
 EX_BINANCE = 'binance'
 
+EX_SET = (
+    EX_OKEX,
+    EX_BFX,
+    EX_LQ,
+    EX_DGAX,
+    EX_BINANCE
+)
+
 """
 lq 要用到的错误码
 832: 卖的时候币不够了

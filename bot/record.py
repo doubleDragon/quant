@@ -7,7 +7,7 @@ import sys
 
 from binance.client import PublicClient as BnClient
 from bitfinex.client import PublicClient as BfxClient
-from common import util
+from common import util, constant
 
 clint0 = None
 clint1 = None
@@ -42,16 +42,19 @@ def fun1():
 
 
 def main(argv):
-    side_buy = ''
-    side_sell = ''
+    side_buy = None
+    side_sell = constant.EX_BFX
     try:
-        opts, args = getopt.getopt(argv, "hb:s:", ["buy=", "sell="])
-    except getopt.GetoptError:
-        print 'record.py -b <buy> -s <sell>'
-        sys.exit(2)
+        opts, args = getopt.getopt(argv, "hlb:s:", ['buy=', 'sell=', 'list'])
+    except getopt.GetoptError as e:
+        print str(e)
+        sys.exit()
     for opt, arg in opts:
-        if opt == '-h':
+        if opt in ('-h', '--help'):
             print 'record.py -b <buy> -sell <sell>'
+            sys.exit()
+        elif opt in ('-l', '--list'):
+            print(str(constant.EX_SET))
             sys.exit()
         elif opt in ("-b", "--buy"):
             side_buy = arg
@@ -59,9 +62,16 @@ def main(argv):
             side_sell = arg
     print("exchange buy  is: %s" % side_buy)
     print("exchange sell is: %s" % side_sell)
+    if side_sell != constant.EX_BFX:
+        print "exchange sell only support bitfinex now"
+        sys.exit()
+    if side_buy is None:
+        print "exchange buy not found"
+        sys.exit()
+    if side_buy not in constant.EX_SET:
+        print "exchange buy %s not support" % side_buy
+        sys.exit()
 
 
 if __name__ == '__main__':
     main(sys.argv[1:])
-    # fun0()
-    # fun1()
