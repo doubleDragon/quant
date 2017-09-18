@@ -22,6 +22,7 @@ EX_OKEX = 'okex'
 EX_BFX = 'bitfinex'
 EX_LQ = 'liqui'
 EX_DGAX = 'gdax'
+EX_BINANCE = 'binance'
 
 """
 lq 要用到的错误码

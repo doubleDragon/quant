@@ -51,7 +51,6 @@ DIFF_TRIGGER = Decimal('0.7')
 """
 AMOUNT_ONCE = Decimal('0.1')
 
-
 """
 平台单次交易的最小数量,各个平台标准不一样:
     1,lq的限制是每次的total不能低于0.0001, 
@@ -383,7 +382,8 @@ def on_action_trade(state):
             logger.info('当前liqui买单成交量%s小于AMOUNT_MIN, 循环退出' % str(buy_deal_amount))
             return
         """这里如果成交了部分，需要减去手续费"""
-        buy_deal_amount = buy_deal_amount - buy_amount_fee
+        buy_deal_amount = Decimal(str(buy_deal_amount) - Decimal(str(buy_amount_fee)))
+        buy_deal_amount = buy_deal_amount.quantize(D_FORMAT)
 
     # bfx期货准备开空单, 数量和lq买单成交的量相同
     sell_amount = buy_deal_amount
