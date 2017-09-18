@@ -5,40 +5,71 @@ from decimal import Decimal
 
 import sys
 
+import time
+
 from binance.client import PublicClient as BnClient
 from bitfinex.client import PublicClient as BfxClient
+from liqui.client import PublicClient as LqClient
 from common import util, constant
 
-clint0 = None
-clint1 = None
+TICK_INTERVAL = 2
+INTERVAL = 0.8
 
 currency = 'eth'
+
+client_sell = None
+client_buy = None
+
+# 交易所字符串
+exchange_buy = None
+exchange_sell = None
 
 
 def get_symbol(ex_name):
     return util.get_symbol_btc(ex_name, currency)
 
 
-def fun0():
-    global clint0
-    global clint1
-    clint0 = BnClient()
-    clint1 = BfxClient()
+def get_client(name):
+    if name == constant.EX_LQ:
+        return LqClient()
+    if name == constant.EX_BFX:
+        return BfxClient()
+    if name == constant.EX_BINANCE:
+        return BnClient()
+    return None
 
 
-def fun1():
-    # bfx平台
-    depth0 = clint0.depth(get_symbol())
-    if depth0 is None:
+def init():
+    global client_sell
+    global client_buy
+    client_sell = get_client(str(exchange_sell))
+    client_buy = get_client(str(exchange_buy))
+    if not client_buy or not client_sell:
+        raise Exception('exchange not exists')
+
+
+def on_tick():
+    depth_sell = client_sell.depth(get_symbol(exchange_sell))
+    if depth_sell is None:
         return
-    depth1 = clint1.depth()
-    if depth1 is None:
+
+    depth_buy = client_buy.depth(get_symbol(exchange_buy))
+    if depth_buy is None:
         return
-    price_sell = depth0.bids[0].price
-    price_buy = depth1.asks[0].price
+
+    price_sell = depth_sell.bids[0].price
+    price_buy = depth_buy.asks[0].price
 
     diff = (price_sell - price_buy) / price_buy * Decimal('100')
-    print("差价百分比: %s" % diff)
+    diff = diff.quantize(Decimal('0.00000000'))
+    print("%s %s 的差价百分比: %s" % (exchange_sell, exchange_buy, diff))
+
+
+def start():
+    init()
+    while True:
+        time.sleep(TICK_INTERVAL)
+        on_tick()
 
 
 def main(argv):
@@ -71,6 +102,11 @@ def main(argv):
     if side_buy not in constant.EX_SET:
         print "exchange buy %s not support" % side_buy
         sys.exit()
+    global exchange_buy
+    global exchange_sell
+    exchange_buy = side_buy
+    exchange_sell = side_sell
+    start()
 
 
 if __name__ == '__main__':
