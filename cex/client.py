@@ -42,7 +42,6 @@ class PublicClient(object):
         }
         """
         url = self.url + ("/order_book/%s/" % symbol)
-        print('depth url: %s' % url)
         params = {
             'depth': 5
         }

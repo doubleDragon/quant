@@ -23,13 +23,15 @@ EX_BFX = 'bitfinex'
 EX_LQ = 'liqui'
 EX_DGAX = 'gdax'
 EX_BINANCE = 'binance'
+EX_CEX = 'cex'
 
 EX_SET = (
     EX_OKEX,
     EX_BFX,
     EX_LQ,
     EX_DGAX,
-    EX_BINANCE
+    EX_BINANCE,
+    EX_CEX
 )
 
 """

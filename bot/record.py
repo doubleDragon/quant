@@ -7,10 +7,14 @@ import sys
 
 import time
 
+import logging
+
 from binance.client import PublicClient as BnClient
 from bitfinex.client import PublicClient as BfxClient
+from config import settings
 from liqui.client import PublicClient as LqClient
-from common import util, constant
+from cex.client import PublicClient as CexClient
+from common import util, constant, log
 
 TICK_INTERVAL = 2
 INTERVAL = 0.8
@@ -24,6 +28,10 @@ client_buy = None
 exchange_buy = None
 exchange_sell = None
 
+diff_count = 0
+
+logger = log.get_logger(log_name='record', level=logging.DEBUG)
+
 
 def get_symbol(ex_name):
     return util.get_symbol_btc(ex_name, currency)
@@ -36,6 +44,8 @@ def get_client(name):
         return BfxClient()
     if name == constant.EX_BINANCE:
         return BnClient()
+    if name == constant.EX_CEX:
+        return CexClient()
     return None
 
 
@@ -60,9 +70,15 @@ def on_tick():
     price_sell = depth_sell.bids[0].price
     price_buy = depth_buy.asks[0].price
 
-    diff = (price_sell - price_buy) / price_buy * Decimal('100')
-    diff = diff.quantize(Decimal('0.00000000'))
-    print("%s %s 的差价百分比: %s" % (exchange_sell, exchange_buy, diff))
+    diff = price_sell - price_buy
+    diff_percent = diff / price_buy * Decimal('100')
+    diff_percent = diff_percent.quantize(Decimal('0.00000000'))
+    if diff_percent > settings.TRIGGER_DIFF_PERCENT:
+        global diff_count
+        diff_count += 1
+    logger.info("%s 买价: %s，    %s 卖价: %s" % (exchange_buy, price_buy, exchange_sell, price_sell))
+    logger.info("%s %s 的差价:%s,    差价百分比: %s,   频率: %s" %
+                (exchange_sell, exchange_buy, diff, diff_percent, diff_count))
 
 
 def start():
@@ -93,8 +109,8 @@ def main(argv):
             side_sell = arg
     print("exchange buy  is: %s" % side_buy)
     print("exchange sell is: %s" % side_sell)
-    if side_sell != constant.EX_BFX:
-        print "exchange sell only support bitfinex now"
+    if side_sell not in (constant.EX_BFX, constant.EX_CEX):
+        print "exchange sell only support bitfinex and cex now"
         sys.exit()
     if side_buy is None:
         print "exchange buy not found"

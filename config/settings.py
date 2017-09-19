@@ -20,3 +20,5 @@ LIQUI_API_SECRET = config('LIQUI_API_SECRET')
 
 """http request timeout"""
 TIMEOUT = 5
+
+TRIGGER_DIFF_PERCENT = 0.8

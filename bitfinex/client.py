@@ -130,7 +130,7 @@ class PublicClient:
         try:
             resp = requests.get(url, timeout=TIMEOUT)
         except requests.exceptions.RequestException as e:
-            print('bitfinex get ticker failed: ' + str(e))
+            print("bitfinex get %s failed: " % url + str(e))
         else:
             if resp.status_code == requests.codes.ok:
                 return resp.json()
