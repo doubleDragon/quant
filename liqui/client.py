@@ -5,6 +5,7 @@ import hmac
 import time
 from decimal import Decimal
 from urllib import urlencode
+from config import settings
 
 import requests
 
@@ -15,9 +16,6 @@ HOST = "api.liqui.io/api"
 VERSION = "3"
 
 BASE_URL = u"{0:s}://{1:s}/{2:s}".format(PROTOCOL, HOST, VERSION)
-
-# HTTP request timeout in seconds
-TIMEOUT = 5.0
 
 
 class LiquiApiError(Exception):
@@ -31,9 +29,8 @@ def url_for(path, path_arg=None, parameters=None):
 
 class PublicClient(object):
     def _get(self, url):
-        # return requests.get(url, timeout=TIMEOUT)
         try:
-            response = requests.get(url, timeout=TIMEOUT)
+            response = requests.get(url, timeout=settings.TIMEOUT)
         except requests.exceptions.RequestException as e:
             print('liqui get' + url + ' failed: ' + str(e))
         else:

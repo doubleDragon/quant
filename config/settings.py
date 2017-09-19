@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 # coding=utf-8
 from decouple import config
 
@@ -13,6 +15,8 @@ OKCOIN_API_SECRET = config('OKCOIN_API_SECRET')
 OKEX_API_KEY = config('OKEX_API_KEY')
 OKEX_API_SECRET = config('OKEX_API_SECRET')
 
-
 LIQUI_API_KEY = config('LIQUI_API_KEY')
 LIQUI_API_SECRET = config('LIQUI_API_SECRET')
+
+"""http request timeout"""
+TIMEOUT = 5
