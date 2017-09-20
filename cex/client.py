@@ -186,7 +186,6 @@ class PrivateClient(PublicClient):
     def cancel_all_orders(self, symbol):
         url = BASE_URL + "/cancel_orders/%s" % symbol
         resp = self.__post(url=url)
-        print(str(resp))
         if resp is not None:
             return resp[u'ok'] == 'ok'
 

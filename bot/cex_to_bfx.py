@@ -22,7 +22,7 @@ import logging
 logger = log.get_logger(log_name='wsl', level=logging.INFO)
 
 bfxClient = BfxClient(settings.BFX_API_KEY, settings.BFX_API_SECRET)
-cexClient = CexClient(settings.CEX_API_KEY, settings.CEX_API_SECRET)
+cexClient = CexClient(settings.CEX_USER_ID, settings.CEX_API_KEY, settings.CEX_API_SECRET)
 
 CURRENCY = settings.CURRENCY
 
@@ -36,8 +36,10 @@ def init():
 
 
 def cancel_all_orders():
-    cexClient.cancel_all_orders(get_symbol(constant.EX_CEX, CURRENCY))
-    bfxClient.cancel_all_orders()
+    while cexClient.cancel_all_orders(get_symbol(constant.EX_CEX, CURRENCY)):
+        time.sleep(settings.INTERVAL)
+    while bfxClient.cancel_all_orders():
+        time.sleep(settings.INTERVAL)
 
 
 def get_max_amount(list_tmp, index):
@@ -50,7 +52,7 @@ def get_max_amount(list_tmp, index):
 
 
 def get_symbol(ex_name, currency):
-    util.get_symbol_btc(ex_name, currency)
+    return util.get_symbol_btc(ex_name, currency)
 
 
 def update_state(state):
