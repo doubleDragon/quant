@@ -173,15 +173,15 @@ def get_deal_amount(ex_name, order_id):
     """
     if ex_name == constant.EX_CEX:
         while True:
-            order_r = cexClient.get_order(order_id)
-            if order_r is None:
+            order_r, error = cexClient.get_order(order_id)
+            if (order_r is None) or (error is not None):
                 time.sleep(settings.INTERVAL)
                 continue
             break
     else:
         while True:
-            order_r = bfxClient.get_order(order_id)
-            if order_r is None:
+            order_r, error = bfxClient.get_order(order_id)
+            if (order_r is None) or (error is not None):
                 time.sleep(settings.INTERVAL)
                 continue
             break
