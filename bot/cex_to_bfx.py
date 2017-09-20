@@ -36,9 +36,18 @@ def init():
 
 
 def cancel_all_orders():
-    while cexClient.cancel_all_orders(get_symbol(constant.EX_CEX, CURRENCY)):
+    cancel_success = False
+    while cancel_success is False:
+        cancel_success = cexClient.cancel_all_orders(get_symbol(constant.EX_CEX, CURRENCY))
+        if cancel_success:
+            break
         time.sleep(settings.INTERVAL)
-    while bfxClient.cancel_all_orders():
+
+    cancel_success = False
+    while cancel_success is False:
+        cancel_success = bfxClient.cancel_all_orders()
+        if cancel_success:
+            break
         time.sleep(settings.INTERVAL)
 
 
@@ -222,7 +231,7 @@ def on_action_trade(state):
     if btc_cex is None:
         raise ValueError('cex账户不存在btc')
 
-    balance_btc_cex = Decimal(repr(btc_cex.balance))
+    balance_btc_cex = Decimal(str(btc_cex.balance))
     if state.cex.is_maker:
         max_amount_cex = state.cex.ticker.buy.max_amount
         buy_price_cex = state.cex.ticker.buy.price
@@ -372,6 +381,7 @@ def on_action_ticker(state):
     if state.diff_percent >= settings.TRIGGER_DIFF_PERCENT:
         if state.delay > settings.MAX_DELAY:
             # 延迟超过设定的值，放弃这次机会
+            logger.info("差价触发, 但是延迟超过%s, 放弃机会%s" % (state.delay, state.diff_percent))
             return
         logger.info('差价触发,准备交易========>diff_percent: ' + str(state.diff_percent))
         on_action_trade(state)

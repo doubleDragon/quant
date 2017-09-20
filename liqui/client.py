@@ -30,7 +30,7 @@ def url_for(path, path_arg=None, parameters=None):
 class PublicClient(object):
     def _get(self, url):
         try:
-            response = requests.get(url, timeout=settings.TIMEOUT)
+            response = requests.get(url, timeout=5)
         except requests.exceptions.RequestException as e:
             print('liqui get' + url + ' failed: ' + str(e))
         else:
