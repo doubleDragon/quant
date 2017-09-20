@@ -11,7 +11,7 @@ import time
 
 from decimal import Decimal
 
-from common import depth, constant, order, account, ticker
+from common import depth, constant, order, account, ticker, error
 
 PROTOCOL = "https"
 HOST = "api.bitfinex.com"
@@ -209,7 +209,6 @@ class PrivateClient(PublicClient):
         url = BASE_URL + "/order/new"
         resp = self._post(url=url, headers=signed_payload)
         return dict_to_order(resp)
-        # return dict_to_order_result(resp)
 
     def buy(self, symbol, amount, price):
         side = 'buy'
@@ -273,9 +272,7 @@ class PrivateClient(PublicClient):
         signed_payload = self._sign_payload(payload)
         url = BASE_URL + "/order/status"
         resp = self._post(url=url, headers=signed_payload)
-        if resp is not None:
-            # 转换order status dict to common
-            return dict_to_order(resp)
+        return dict_to_order(resp)
 
     def cancel_order(self, order_id):
         payload = {
@@ -324,23 +321,26 @@ def dict_to_account(data):
 
 
 def dict_to_order(resp):
-    origin_amount = Decimal(resp[u'original_amount'])
-    executed_amount = Decimal(resp[u'executed_amount'])
+    if resp is not None:
+        origin_amount = Decimal(str(resp[u'original_amount']))
+        executed_amount = Decimal(str(resp[u'executed_amount']))
 
-    is_cancelled = resp[u'is_cancelled']
-    is_completed = (executed_amount == origin_amount)
-    if is_completed:
-        order_status = constant.ORDER_STATE_CLOSED
-    else:
-        if is_cancelled:
-            order_status = constant.ORDER_STATE_CANCELED
+        is_cancelled = resp[u'is_cancelled']
+        is_completed = (executed_amount == origin_amount)
+        if is_completed:
+            order_status = constant.ORDER_STATE_CLOSED
         else:
-            order_status = constant.ORDER_STATE_PENDING
-    order_id = resp[u'id']
-    price = resp[u'price']
-    order_type = resp[u'type']
-    return order.Order(order_id=order_id, price=price, status=order_status, order_type=order_type,
-                       amount=origin_amount, deal_amount=executed_amount)
+            if is_cancelled:
+                order_status = constant.ORDER_STATE_CANCELED
+            else:
+                order_status = constant.ORDER_STATE_PENDING
+        order_id = resp[u'id']
+        price = resp[u'price']
+        order_type = resp[u'type']
+        return order.Order(order_id=order_id, price=price, status=order_status, order_type=order_type,
+                           amount=origin_amount, deal_amount=executed_amount), None
+    else:
+        return None, error.HttpError()
 
 
 def dict_to_order_result(resp):

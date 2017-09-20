@@ -15,6 +15,12 @@ class Account(list):
     def __init__(self):
         super(Account, self).__init__()
 
+    def __str__(self):
+        return super(Account, self).__str__()
+
+    def __repr__(self):
+        return super(Account, self).__repr__()
+
 
 class Item(object):
     """
