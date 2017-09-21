@@ -14,6 +14,7 @@ from bitfinex.client import PublicClient as BfxClient
 from config import settings
 from liqui.client import PublicClient as LqClient
 from cex.client import PublicClient as CexClient
+from gdax.client import PublicClient as GdaxClient
 from common import util, constant, log
 
 TICK_INTERVAL = 2
@@ -46,6 +47,8 @@ def get_client(name):
         return BnClient()
     if name == constant.EX_CEX:
         return CexClient()
+    if name == constant.EX_GDAX:
+        return GdaxClient()
     return None
 
 
@@ -68,7 +71,8 @@ def on_tick():
         return
 
     price_sell = depth_sell.bids[0].price
-    price_buy = depth_buy.asks[0].price
+    # price_buy = depth_buy.asks[0].price
+    price_buy = depth_buy.bids[0].price
 
     diff = price_sell - price_buy
     diff_percent = diff / price_buy * Decimal('100')

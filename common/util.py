@@ -8,8 +8,8 @@ def get_symbol_btc(name, currency):
         return "%s_btc" % currency
     if name == constant.EX_BFX:
         return "%sbtc" % convert_currency(constant.EX_BFX, currency)
-    if name == constant.EX_DGAX:
-        return "%s-BTC" % convert_currency(constant.EX_DGAX, currency)
+    if name == constant.EX_GDAX:
+        return "%s-BTC" % convert_currency(constant.EX_GDAX, currency)
     if name == constant.EX_BINANCE:
         return "%sBTC" % convert_currency(constant.EX_BINANCE, currency)
     if name == constant.EX_CEX:
@@ -31,7 +31,7 @@ def convert_currency(name, currency):
     if name == constant.EX_BFX:
         if currency == "dash":
             currency = "dsh"
-    if name == constant.EX_DGAX:
+    if name == constant.EX_GDAX:
         currency = currency.upper()
     if name == constant.EX_BINANCE:
         currency = currency.upper()
@@ -49,5 +49,5 @@ def convert_currency(name, currency):
 # print (get_symbol_btc(constant.EX_BFX, u'dash'))
 # print (get_symbol_btc(constant.EX_LQ, u'dash'))
 
-# print (get_symbol_btc(constant.EX_DGAX, u'ETH'))
+# print (get_symbol_btc(constant.EX_GDAX, u'ETH'))
 # print (get_symbol_btc(constant.EX_BINANCE, u'eth'))

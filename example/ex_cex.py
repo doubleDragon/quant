@@ -15,15 +15,15 @@ def main():
     # print(client.depth("ETH/BTC"))
 
     # place order
-    # currency = 'bch'
-    # symbol = util.get_symbol_btc(constant.EX_CEX, currency)
-    # price = '0.10209'
-    # amount = '0.1'
-    # order, error = client.buy(symbol=symbol, price=price, amount=amount)
-    # if error is not None or order is None or order.order_id is None:
-    #     print (error.message)
-    # else:
-    #     print(order.order_id)
+    currency = 'bch'
+    symbol = util.get_symbol_btc(constant.EX_CEX, currency)
+    price = '0.10054'
+    amount = '0.1'
+    order, error = client.buy(symbol=symbol, price=price, amount=amount)
+    if error is not None or order is None or order.order_id is None:
+        print (error.message)
+    else:
+        print(order.order_id)
 
     # order status
     # order, error = client.get_order('4412711710')
