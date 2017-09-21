@@ -154,7 +154,7 @@ def get_state():
 
     cex_dict = Bunch()
     cex_dict.account = account_cex
-    cex_dict.is_maker = True
+    cex_dict.is_maker = False
     cex_dict.fee = CexConfig.FEE_MAKER if cex_dict.is_maker else CexConfig.FEE_TAKER
 
     state = Bunch({
