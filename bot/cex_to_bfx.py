@@ -187,7 +187,8 @@ def get_deal_amount(ex_name, order_id):
             break
 
     if order_r.is_pending():
-        logger.info("订单%s未完成,  已完成%s, 初始%s" % (order_r.order_id, order_r.deal_amount, order_r.amount))
+        logger.info("订单%s未完成,  已完成%s, 初始%s" %
+                    (str(order_r.order_id), str(order_r.deal_amount), str(order_r.amount)))
         if ex_name == constant.EX_CEX:
             cexClient.cancel_order(order_id)
         else:
@@ -196,9 +197,11 @@ def get_deal_amount(ex_name, order_id):
         return get_deal_amount(ex_name, order_id)
     else:
         if order_r.is_canceled():
-            logger.info("订单%s已取消,  已完成%s, 初始%s" % (order_r.order_id, order_r.deal_amount, order_r.amount))
+            logger.info("订单%s已取消,  已完成%s, 初始%s" %
+                        (str(order_r.order_id), str(order_r.deal_amount), str(order_r.amount)))
         if order_r.is_closed():
-            logger.info("订单%s已完成,  已完成%s, 初始%s" % (order_r.order_id, order_r.deal_amount, order_r.amount))
+            logger.info("订单%s已完成,  已完成%s, 初始%s" %
+                        (str(order_r.order_id), str(order_r.deal_amount), str(order_r.amount)))
         return order_r.deal_amount
 
 
