@@ -399,7 +399,7 @@ def on_tick():
         logger.debug(str(state.exception))
         return
     buy_price = state.cex.ticker.buy.price if state.cex.is_maker else state.cex.ticker.sell.price
-    logger.info("当前价差========>{buy: " + str(buy_price) +
+    logger.info("\n\n当前价差========>{buy: " + str(buy_price) +
                 ", sell: " + str(state.bfx.ticker.buy.price) +
                 ", diff_percent: " + str(state.diff_percent) +
                 "}")

@@ -181,7 +181,6 @@ class PrivateClient(PublicClient):
             'id': order_id
         }
         resp = self.__post(url=url, params=params)
-        print(str(resp))
         return dict_to_order_detail(resp)
 
     def cancel_all_orders(self, symbol):
