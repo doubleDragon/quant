@@ -14,6 +14,8 @@ def get_symbol_btc(name, currency):
         return "%sBTC" % convert_currency(constant.EX_BINANCE, currency)
     if name == constant.EX_CEX:
         return "%s/BTC" % convert_currency(constant.EX_CEX, currency)
+    if name == constant.EX_EXMO:
+        return "%s_BTC" % convert_currency(constant.EX_EXMO, currency)
     return currency
 
 
@@ -36,6 +38,8 @@ def convert_currency(name, currency):
     if name == constant.EX_BINANCE:
         currency = currency.upper()
     if name == constant.EX_CEX:
+        currency = currency.upper()
+    if name == constant.EX_EXMO:
         currency = currency.upper()
     return currency
 

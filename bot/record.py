@@ -15,12 +15,13 @@ from config import settings
 from liqui.client import PublicClient as LqClient
 from cex.client import PublicClient as CexClient
 from gdax.client import PublicClient as GdaxClient
+from exmo.client import PublicClient as ExmoClient
 from common import util, constant, log
 
 TICK_INTERVAL = 2
 INTERVAL = 0.8
 
-currency = 'eth'
+currency = 'dash'
 
 client_sell = None
 client_buy = None
@@ -49,6 +50,8 @@ def get_client(name):
         return CexClient()
     if name == constant.EX_GDAX:
         return GdaxClient()
+    if name == constant.EX_EXMO:
+        return ExmoClient()
     return None
 
 

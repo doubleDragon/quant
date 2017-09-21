@@ -49,6 +49,8 @@ class PublicClient(object):
         }
         resp = self._get(url=url, params=params)
         if resp is not None:
+            if u'error' in resp and resp[u'error'] is not None:
+                return None
             data = {
                 u'bids': [],
                 u'asks': []
@@ -56,7 +58,7 @@ class PublicClient(object):
             tmp = [u'price', u'amount']
 
             def fn(x):
-                return Decimal(repr(x))
+                return Decimal(str(x))
 
             # sort the bids and asks
             resp[u'asks'] = sorted(resp[u'asks'], key=lambda ask_item: ask_item[0])
@@ -139,7 +141,6 @@ class PrivateClient(PublicClient):
             'price': str(order_price),
         }
         resp = self.__post(url=url, params=params)
-        print(str(resp))
         return dict_to_order(resp)
 
     def buy(self, symbol, price, amount):

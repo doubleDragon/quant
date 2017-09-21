@@ -26,7 +26,7 @@ CEX_USER_ID = "up109027181"
 
 """主要配置, 根据平台和币种来调整, 改完后记的去调整对应交易所的config"""
 # 当前交易币种
-CURRENCY = 'bch'
+CURRENCY = 'dash'
 # 单次交易的amount
 AMOUNT_ONCE = Decimal('0.1')
 # 滑价配置
