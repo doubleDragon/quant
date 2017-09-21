@@ -1,13 +1,10 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
-# import sys
-# sys.path.append('/root/workspace/python/quant')
 
 import time
 from decimal import Decimal
 
-from bitfinex.client import PrivateClient as BfxClient
-from config import settings
+from bitfinex.client import PublicClient as BfxClient
 from liqui.client import PublicClient as LiquiClient
 
 from common import constant, util, log
@@ -23,12 +20,13 @@ CURRENCY_ETH = u'eth'
 CURRENCY_OMG = u'omg'
 CURRENCY_EOS = u'eos'
 CURRENCY_DASH = u'dash'
+CURRENCY_BCC = u'bcc'
 
 # TRIGGER_LIST = [Decimal('0.00043'), Decimal('0.000095'), Decimal('0.000095'), Decimal('0.000095')]
 
 # DIFF_TRIGGER = Decimal('0.000095')
 
-bfxClient = BfxClient(settings.BFX_API_KEY, settings.BFX_API_SECRET)
+bfxClient = BfxClient()
 lqClient = LiquiClient()
 
 DEPTH_INDEX_BFX = 1
@@ -36,15 +34,16 @@ DEPTH_INDEX_LQ = 0
 
 TRIGGER_PERCENT = Decimal('0.7')
 
-CURRENCIES = [CURRENCY_ETH, CURRENCY_LTC, CURRENCY_OMG, CURRENCY_EOS, CURRENCY_DASH]
+CURRENCIES = [CURRENCY_ETH, CURRENCY_LTC, CURRENCY_OMG, CURRENCY_EOS, CURRENCY_DASH, CURRENCY_BCC]
 trigger_count = {
     CURRENCY_ETH: 0,
     CURRENCY_LTC: 0,
     CURRENCY_OMG: 0,
     CURRENCY_EOS: 0,
-    CURRENCY_DASH: 0
+    CURRENCY_DASH: 0,
+    CURRENCY_BCC: 0
 }
-is_maker = True
+is_maker = False
 is_eth = False
 # CURRENCIES = [CURRENCY_OMG, CURRENCY_EOS]
 # trigger_count = {

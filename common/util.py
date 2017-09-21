@@ -33,6 +33,8 @@ def convert_currency(name, currency):
     if name == constant.EX_BFX:
         if currency == "dash":
             currency = "dsh"
+        if currency == "bcc":
+            currency = "bch"
     if name == constant.EX_GDAX:
         currency = currency.upper()
     if name == constant.EX_BINANCE:
