@@ -28,7 +28,7 @@ CEX_USER_ID = "up109027181"
 # 当前交易币种
 CURRENCY = 'dash'
 # 单次交易的amount
-AMOUNT_ONCE = Decimal('0.1')
+AMOUNT_ONCE = Decimal('0.01')
 # 滑价配置
 SLIDE_PRICE = Decimal('0.0000001')
 # 差价触发百分比
