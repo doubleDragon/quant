@@ -23,7 +23,7 @@ BASE_URL = u"{0:s}://{1:s}/{2:s}".format(PROTOCOL, HOST, VERSION)
 TIMEOUT = 5.0
 
 
-class PublicClient:
+class PublicClient(object):
     """
     Client for the bitfinex.com API.
 
@@ -93,6 +93,12 @@ class PublicClient:
         {"bids":[{"price":"561.1101","amount":"0.985","timestamp":"1395557729.0"}],"asks":[]}
 
         """
+        if parameters is None:
+            parameters = {}
+        parameters.update({
+            'limit_bids': 5,
+            'limit_asks': 5
+        })
         resp = self._get(self.url_for('book/%s', path_arg=symbol.lower(), parameters=parameters))
         if resp is not None:
             data = {
@@ -256,6 +262,16 @@ class PrivateClient(PublicClient):
 
             if data is not None:
                 return dict_to_account(data)
+
+    def account_info(self):
+        payload = {
+            "request": "/v1/account_infos",
+            "nonce": self._nonce
+        }
+
+        signed_payload = self._sign_payload(payload)
+        url = BASE_URL + "/balances"
+        return self._post(url=url, headers=signed_payload)
 
     def get_order(self, order_id):
         """

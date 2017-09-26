@@ -1,32 +1,30 @@
 import constant
 
 
-def get_symbol_btc(name, currency):
+def get_symbol(name, base_cur, quote_cur='btc'):
     if name == constant.EX_LQ:
-        return "%s_btc" % currency
+        return "%s_%s" % (base_cur.lower(), quote_cur.lower())
     if name == constant.EX_OKEX:
-        return "%s_btc" % currency
+        return "%s_%s" % (base_cur.lower(), quote_cur.lower())
     if name == constant.EX_BFX:
-        return "%sbtc" % convert_currency(constant.EX_BFX, currency)
+        return "%s%s" % (base_cur.lower(), quote_cur.lower())
     if name == constant.EX_GDAX:
-        return "%s-BTC" % convert_currency(constant.EX_GDAX, currency)
+        return "%s-%s" % (base_cur.upper(), quote_cur.upper())
     if name == constant.EX_BINANCE:
-        return "%sBTC" % convert_currency(constant.EX_BINANCE, currency)
+        return "%s%s" % (base_cur.upper(), quote_cur.upper())
     if name == constant.EX_CEX:
-        return "%s/BTC" % convert_currency(constant.EX_CEX, currency)
+        return "%s/%s" % (base_cur.upper(), quote_cur.upper())
     if name == constant.EX_EXMO:
-        return "%s_BTC" % convert_currency(constant.EX_EXMO, currency)
-    return currency
+        return "%s_%s" % (base_cur.upper(), quote_cur.upper())
+    return "%s_%s" % (base_cur, quote_cur)
+
+
+def get_symbol_btc(name, currency):
+    return get_symbol(name, base_cur=currency, quote_cur='btc')
 
 
 def get_symbol_eth(name, currency):
-    if name == constant.EX_LQ:
-        return "%s_eth" % currency
-    if name == constant.EX_OKEX:
-        return "%s_eth" % currency
-    if name == constant.EX_BFX:
-        return "%seth" % convert_currency(constant.EX_BFX, currency)
-    return currency
+    return get_symbol(name, base_cur=currency, quote_cur='eth')
 
 
 def convert_currency(name, currency):

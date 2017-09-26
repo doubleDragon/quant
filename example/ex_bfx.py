@@ -9,16 +9,19 @@ API_KEY = settings.BFX_API_KEY
 API_SECRET = settings.BFX_API_SECRET
 
 client = BfxClient(API_KEY, API_SECRET)
-# print(client.symbols())
+print(client.symbols())
+
+# account info
+print(client.account_info())
 
 # balance
-# print (client.balance())
+print (client.balance())
 
 # ticker
 # print(client.ticker('ltcusd'))
 
 # depth
-print(client.depth('dashbtc'))
+# print(client.depth('dashbtc'))
 
 
 # trade

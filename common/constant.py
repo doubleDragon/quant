@@ -25,6 +25,7 @@ EX_GDAX = 'gdax'
 EX_BINANCE = 'binance'
 EX_CEX = 'cex'
 EX_EXMO = 'exmo'
+EX_CHECK = 'coincheck'
 
 EX_SET = (
     EX_OKEX,
@@ -33,7 +34,8 @@ EX_SET = (
     EX_GDAX,
     EX_BINANCE,
     EX_CEX,
-    EX_EXMO
+    EX_EXMO,
+    EX_CHECK
 )
 
 """
