@@ -26,6 +26,8 @@ EX_BINANCE = 'binance'
 EX_CEX = 'cex'
 EX_EXMO = 'exmo'
 EX_CHECK = 'coincheck'
+EX_POLONIEX = 'poloniex'
+EX_BITTREX = 'bittrex'
 
 EX_SET = (
     EX_OKEX,
@@ -35,7 +37,9 @@ EX_SET = (
     EX_BINANCE,
     EX_CEX,
     EX_EXMO,
-    EX_CHECK
+    EX_CHECK,
+    EX_POLONIEX,
+    EX_BITTREX,
 )
 
 """

@@ -32,7 +32,7 @@ AMOUNT_ONCE = Decimal('0.01')
 # 滑价配置
 SLIDE_PRICE = Decimal('0.0000001')
 # 差价触发百分比
-TRIGGER_DIFF_PERCENT = Decimal('0.8')
+TRIGGER_DIFF_PERCENT = Decimal('1.0')
 # 吃单时，max_amount的几分之一
 AMOUNT_RATE = Decimal('2')
 # 账户内保留的法币stock, 可能是btc的数量，也可能是margin钱包usd数量，取决于交易所, 先设置成0

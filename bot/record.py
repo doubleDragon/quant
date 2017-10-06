@@ -16,12 +16,14 @@ from liqui.client import PublicClient as LqClient
 from cex.client import PublicClient as CexClient
 from gdax.client import PublicClient as GdaxClient
 from exmo.client import PublicClient as ExmoClient
+from poloniex.client import Client as PoloClient
+from bittrex.client import Bittrex as BittrexClient
 from common import util, constant, log
 
 TICK_INTERVAL = 2
 INTERVAL = 0.8
 
-currency = 'dash'
+currency = None
 
 client_sell = None
 client_buy = None
@@ -30,9 +32,14 @@ client_buy = None
 exchange_buy = None
 exchange_sell = None
 
-diff_count = 0
+diff_count_forward = 0
+diff_count_reverse = 0
 
 logger = log.get_logger(log_name='record', level=logging.DEBUG)
+
+"""
+python -m bot.record -bbinance -sbitfinex -ceth
+"""
 
 
 def get_symbol(ex_name):
@@ -52,6 +59,10 @@ def get_client(name):
         return GdaxClient()
     if name == constant.EX_EXMO:
         return ExmoClient()
+    if name == constant.EX_POLONIEX:
+        return PoloClient()
+    if name == constant.EX_BITTREX:
+        return BittrexClient('', '')
     return None
 
 
@@ -73,19 +84,33 @@ def on_tick():
     if depth_buy is None:
         return
 
-    price_sell = depth_sell.bids[0].price
-    # price_buy = depth_buy.asks[0].price
-    price_buy = depth_buy.bids[0].price
+    # forward
+    price_sell_forward = depth_sell.bids[0].price
+    price_buy_forward = depth_buy.asks[0].price
 
-    diff = price_sell - price_buy
-    diff_percent = diff / price_buy * Decimal('100')
-    diff_percent = diff_percent.quantize(Decimal('0.00000000'))
-    if diff_percent > settings.TRIGGER_DIFF_PERCENT:
-        global diff_count
-        diff_count += 1
-    logger.info("%s 买价: %s，    %s 卖价: %s" % (exchange_buy, price_buy, exchange_sell, price_sell))
-    logger.info("%s %s 的差价:%s,    差价百分比: %s,   频率: %s" %
-                (exchange_sell, exchange_buy, diff, diff_percent, diff_count))
+    diff_forward = price_sell_forward - price_buy_forward
+    diff_percent_forward = diff_forward / price_buy_forward * Decimal('100')
+    diff_percent_forward = diff_percent_forward.quantize(Decimal('0.00000000'))
+    if diff_percent_forward > settings.TRIGGER_DIFF_PERCENT:
+        global diff_count_forward
+        diff_count_forward += 1
+    logger.info("forward======>%s  买价: %s， 卖价: %s" %
+                (currency, price_buy_forward, price_sell_forward))
+    logger.info("forward======>%s %s %s 的差价:%s,    差价百分比: %s,   频率: %s" %
+                (currency, exchange_sell, exchange_buy, diff_forward, diff_percent_forward, diff_count_forward))
+
+    price_sell_reverse = depth_buy.bids[0].price
+    price_buy_reverse = depth_sell.asks[0].price
+    diff_reverse = price_sell_reverse - price_buy_reverse
+    diff_percent_reverse = diff_reverse / price_buy_reverse * Decimal('100')
+    diff_percent_reverse = diff_percent_reverse.quantize(Decimal('0.00000000'))
+    if diff_percent_reverse > settings.TRIGGER_DIFF_PERCENT:
+        global diff_count_reverse
+        diff_count_reverse += 1
+    logger.info("reverse======>%s 买价: %s，  卖价: %s" %
+                (currency, price_sell_reverse, price_buy_reverse))
+    logger.info("reverse======>%s %s %s 的差价:%s,    差价百分比: %s,   频率: %s" %
+                (currency, exchange_sell, exchange_buy, diff_reverse, diff_percent_reverse, diff_count_reverse))
 
 
 def start():
@@ -97,9 +122,10 @@ def start():
 
 def main(argv):
     side_buy = None
-    side_sell = constant.EX_BFX
+    side_sell = None
+    c = None
     try:
-        opts, args = getopt.getopt(argv, "hlb:s:", ['buy=', 'sell=', 'list'])
+        opts, args = getopt.getopt(argv, "hlb:s:c:", ['buy=', 'sell=', 'currency=', 'list'])
     except getopt.GetoptError as e:
         print str(e)
         sys.exit()
@@ -114,10 +140,14 @@ def main(argv):
             side_buy = arg
         elif opt in ("-s", "--sell"):
             side_sell = arg
-    print("exchange buy  is: %s" % side_buy)
-    print("exchange sell is: %s" % side_sell)
-    if side_sell not in (constant.EX_BFX, constant.EX_CEX):
-        print "exchange sell only support bitfinex and cex now"
+        elif opt in ("-c", "--currency"):
+            c = arg
+
+    if side_sell is None:
+        print "exchange sell not found"
+        sys.exit()
+    if side_sell not in constant.EX_SET:
+        print "exchange sell %s not support" % side_sell
         sys.exit()
     if side_buy is None:
         print "exchange buy not found"
@@ -125,10 +155,20 @@ def main(argv):
     if side_buy not in constant.EX_SET:
         print "exchange buy %s not support" % side_buy
         sys.exit()
+
+    if not c:
+        print "exchange currencynot exists"
+        sys.exit()
     global exchange_buy
     global exchange_sell
+    global currency
     exchange_buy = side_buy
     exchange_sell = side_sell
+    currency = c
+
+    print("exchange buy  is: %s" % side_buy)
+    print("exchange sell is: %s" % side_sell)
+    print("exchange currency is: %s" % c)
     start()
 
 

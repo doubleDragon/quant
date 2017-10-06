@@ -7,6 +7,7 @@ def get_symbol(name, base_cur, quote_cur='btc'):
     if name == constant.EX_OKEX:
         return "%s_%s" % (base_cur.lower(), quote_cur.lower())
     if name == constant.EX_BFX:
+        base_cur = convert_currency(name, base_cur)
         return "%s%s" % (base_cur.lower(), quote_cur.lower())
     if name == constant.EX_GDAX:
         return "%s-%s" % (base_cur.upper(), quote_cur.upper())
@@ -16,6 +17,8 @@ def get_symbol(name, base_cur, quote_cur='btc'):
         return "%s/%s" % (base_cur.upper(), quote_cur.upper())
     if name == constant.EX_EXMO:
         return "%s_%s" % (base_cur.upper(), quote_cur.upper())
+    if name == constant.EX_BITTREX:
+        return "%s-%s" % (quote_cur.upper(), base_cur.upper())
     return "%s_%s" % (base_cur, quote_cur)
 
 
